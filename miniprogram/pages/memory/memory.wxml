@@ -1,0 +1,68 @@
+<view class="page white safe-bottom">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>••• WiFi ▪</text>
+  </view>
+  <view class="title-row">
+    <view class="page-title">纪念分享 <text>◎</text></view>
+    <view bindtap="toggleComposer" class="week-pill">+ 发布</view>
+  </view>
+
+  <view wx:if="{{showComposer}}" class="composer-card card">
+    <textarea bindinput="changeMomentContent" value="{{momentDraft.content}}" class="composer-text" placeholder="记录此刻想说的话"></textarea>
+    <view wx:if="{{momentDraft.image}}" class="image-preview-wrap">
+      <image mode="aspectFill" src="{{momentDraft.image}}" class="image-preview"></image>
+      <view bindtap="removeDraftImage" class="remove-image">×</view>
+    </view>
+    <view class="composer-actions">
+      <button bindtap="chooseDraftImage" class="image-btn">选择图片</button>
+      <button bindtap="submitMoment" class="publish-btn">发布</button>
+    </view>
+  </view>
+
+  <view class="pill-tabs">
+    <view wx:for="{{tabs}}" wx:key="key" bindtap="switchTab" data-key="{{item.key}}" class="pill-tab {{active === item.key ? 'active-pink' : ''}}">{{item.text}}</view>
+  </view>
+
+  <view wx:if="{{active === 'feed'}}" class="feed">
+    <view wx:for="{{moments}}" wx:key="id" class="moment-card card">
+      <view class="moment-head">
+        <view class="avatar small {{item.author === '阿杰' ? 'dark' : ''}}">{{item.avatar}}</view>
+        <view class="moment-meta">
+          <view class="author">{{item.author}}</view>
+          <view class="time">{{item.time}}</view>
+        </view>
+        <view class="moment-tag">{{item.tag}}</view>
+      </view>
+      <view class="moment-text">{{item.content}}</view>
+      <image wx:if="{{item.image}}" mode="aspectFill" src="{{item.image}}" class="moment-image"></image>
+      <view class="moment-actions">
+        <text>评论</text>
+        <text bindtap="toggleLike" data-id="{{item.id}}" class="like">{{item.liked ? '已喜欢' : '喜欢'}}</text>
+        <text bindtap="deleteMoment" data-id="{{item.id}}">删除</text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:elif="{{active === 'timeline'}}" class="timeline">
+    <view class="time-group">{{monthTitle}}</view>
+    <view wx:for="{{moments}}" wx:key="id" class="timeline-item">
+      <view class="dot"></view>
+      <view class="timeline-card card">
+        <view class="time">{{item.time}}</view>
+        <view>{{item.content}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:else class="date-list">
+    <view wx:for="{{anniversaries}}" wx:key="title" class="date-row card">
+      <view class="date-icon">{{item.icon}}</view>
+      <view>
+        <view class="date-title">{{item.title}}</view>
+        <view class="date-date">{{item.date}}</view>
+      </view>
+      <view class="date-days">{{item.days}}天</view>
+    </view>
+  </view>
+</view>

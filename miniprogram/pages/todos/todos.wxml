@@ -1,0 +1,68 @@
+<view class="page safe-bottom">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>••• WiFi ▪</text>
+  </view>
+  <view class="title-row">
+    <view class="page-title">需做列表 <text>✓</text></view>
+    <view bindtap="addTask" class="week-pill">+ 新建</view>
+  </view>
+
+  <view wx:if="{{showTaskForm}}" class="task-form card">
+    <input bindinput="changeTaskTitle" value="{{taskForm.title}}" class="form-input" placeholder="任务内容" />
+    <input bindinput="changeTaskTag" value="{{taskForm.tag}}" class="form-input" placeholder="标签，例如家务、约会、纪念日" />
+    <picker mode="date" value="{{taskForm.due}}" bindchange="changeTaskDate">
+      <view class="form-row">
+        <text>日期</text>
+        <text>{{taskForm.due}}</text>
+      </view>
+    </picker>
+    <picker range="{{typeOptions}}" value="{{typeIndex}}" bindchange="changeTaskType">
+      <view class="form-row">
+        <text>周期</text>
+        <text>{{typeOptions[typeIndex]}}</text>
+      </view>
+    </picker>
+    <picker range="{{ownerOptions}}" value="{{ownerIndex}}" bindchange="changeTaskOwner">
+      <view class="form-row">
+        <text>负责人</text>
+        <text>{{ownerOptions[ownerIndex]}}</text>
+      </view>
+    </picker>
+    <input wx:if="{{ownerOptions[ownerIndex] === '自定义'}}" bindinput="changeOwnerCustom" value="{{taskForm.ownerCustom}}" class="form-input" placeholder="输入自定义负责人" />
+    <view class="form-actions">
+      <button bindtap="closeTaskForm" class="cancel-btn">取消</button>
+      <button bindtap="submitTask" class="save-btn">保存</button>
+    </view>
+  </view>
+
+  <view class="pill-tabs todo-tabs">
+    <view wx:for="{{tabs}}" wx:key="key" bindtap="switchTab" data-key="{{item.key}}" class="pill-tab {{active === item.key ? 'active-purple' : ''}}">
+      {{item.text}} <text class="badge">{{item.count}}</text>
+    </view>
+  </view>
+
+  <view class="task-list">
+    <block wx:for="{{tasks}}" wx:key="id">
+      <view wx:if="{{item.status === active}}" class="task-card card {{active === 'done' ? 'done' : ''}}">
+        <view class="task-top">
+          <view class="circle {{active === 'done' ? 'checked' : ''}}">{{active === 'done' ? '✓' : ''}}</view>
+          <view class="task-title">{{item.title}}</view>
+          <view bindtap="deleteTask" data-id="{{item.id}}" class="delete-link">删除</view>
+        </view>
+        <view class="tags">
+          <text wx:if="{{item.tag}}" class="tag">{{item.tag}}</text>
+          <text class="tag">负责人 {{item.owner}}</text>
+          <text class="tag red">{{item.type}}</text>
+          <text wx:if="{{item.due}}" class="tag yellow">{{item.due}}</text>
+          <text wx:if="{{item.reward}}" class="tag green">{{item.reward}}</text>
+        </view>
+        <button wx:if="{{active === 'todo'}}" bindtap="complete" data-id="{{item.id}}" class="soft-btn">完成任务</button>
+        <view wx:elif="{{active === 'review'}}" class="review-actions">
+          <button bindtap="approve" data-id="{{item.id}}" class="pass">✓ 通过</button>
+          <button bindtap="reject" data-id="{{item.id}}" class="reject">X 驳回</button>
+        </view>
+      </view>
+    </block>
+  </view>
+</view>

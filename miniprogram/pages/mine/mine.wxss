@@ -1,0 +1,161 @@
+.mine-page {
+  min-height: 100vh;
+  background: #fff4f7;
+}
+
+.profile-hero {
+  min-height: 360rpx;
+  padding: 46rpx 44rpx 70rpx;
+  background: radial-gradient(circle at 92% 10%, rgba(255, 255, 255, 0.16) 0 120rpx, transparent 122rpx),
+    linear-gradient(135deg, #8e68ed 0%, #ff5f85 100%);
+}
+
+.hero-status {
+  color: #0c1730;
+}
+
+.mine-title {
+  color: #ffffff;
+}
+
+.profile-row {
+  position: relative;
+  margin-top: 34rpx;
+  display: flex;
+  align-items: center;
+  gap: 28rpx;
+}
+
+.avatar.big {
+  width: 112rpx;
+  height: 112rpx;
+  font-size: 46rpx;
+}
+
+.edit-dot {
+  position: absolute;
+  left: 84rpx;
+  top: 72rpx;
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff5a78;
+  background: #ffffff;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.profile-text {
+  color: #ffffff;
+}
+
+.name {
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.line {
+  margin-top: 8rpx;
+  font-size: 24rpx;
+  opacity: 0.92;
+}
+
+.mine-content {
+  margin-top: -70rpx;
+  padding: 0 34rpx 140rpx;
+}
+
+.relation-card {
+  padding: 30rpx;
+}
+
+.relation-title {
+  color: #7287a7;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.relation-row {
+  margin-top: 28rpx;
+  display: grid;
+  grid-template-columns: 1fr 1.2fr 1fr;
+  align-items: center;
+}
+
+.mini-person {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  color: #172944;
+  font-size: 22rpx;
+  font-weight: 900;
+}
+
+.relation-days {
+  text-align: center;
+  color: #ff3867;
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.relation-days text {
+  display: block;
+  margin-top: 2rpx;
+  color: #7287a7;
+  font-size: 22rpx;
+}
+
+.relation-days .date {
+  margin-top: 12rpx;
+  padding-top: 12rpx;
+  border-top: 1rpx solid #f2dce3;
+  color: #8799b4;
+  font-size: 20rpx;
+  font-weight: 500;
+}
+
+.setting-card {
+  overflow: hidden;
+}
+
+.setting-row {
+  min-height: 108rpx;
+  padding: 0 34rpx;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #152742;
+  font-size: 27rpx;
+  font-weight: 900;
+}
+
+.setting-row + .setting-row {
+  border-top: 1rpx solid #f0e3e7;
+}
+
+.setting-row text:last-child {
+  color: #8b9bb4;
+  font-size: 24rpx;
+  font-weight: 600;
+}
+
+.unbind {
+  display: none;
+  height: 92rpx;
+  margin-top: 28rpx;
+  border-radius: 46rpx;
+  color: #ff3867;
+  background: #fff5f6;
+  border: 1rpx solid #ffc7d3;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.unbind.show {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

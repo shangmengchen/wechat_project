@@ -1,0 +1,52 @@
+{
+  "pages": [
+    "pages/pair/pair",
+    "pages/home/home",
+    "pages/memory/memory",
+    "pages/todos/todos",
+    "pages/mine/mine",
+    "pages/schedule/schedule",
+    "pages/order/order",
+    "pages/goal/goals"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "backgroundColor": "#fff4f7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": false,
+    "color": "#8a9ab8",
+    "selectedColor": "#ff3867",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页",
+        "iconPath": "assets/tab/home.png",
+        "selectedIconPath": "assets/tab/home-active.png"
+      },
+      {
+        "pagePath": "pages/memory/memory",
+        "text": "纪念",
+        "iconPath": "assets/tab/memory.png",
+        "selectedIconPath": "assets/tab/memory-active.png"
+      },
+      {
+        "pagePath": "pages/todos/todos",
+        "text": "待办",
+        "iconPath": "assets/tab/todos.png",
+        "selectedIconPath": "assets/tab/todos-active.png"
+      },
+      {
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
+        "iconPath": "assets/tab/mine.png",
+        "selectedIconPath": "assets/tab/mine-active.png"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

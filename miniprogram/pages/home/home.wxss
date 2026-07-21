@@ -1,0 +1,267 @@
+.home-page {
+  min-height: 100vh;
+  background: #fff4f7;
+}
+
+.hero {
+  min-height: 430rpx;
+  padding: 46rpx 32rpx 64rpx;
+  color: #ffffff;
+  background: radial-gradient(circle at 90% 20%, rgba(255, 255, 255, 0.18) 0 124rpx, transparent 126rpx),
+    linear-gradient(135deg, #ff5b7a 0%, #ff5d85 45%, #8b4cff 100%);
+}
+
+.hero-status {
+  color: #0c1730;
+  margin-bottom: 26rpx;
+}
+
+.couple-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+}
+
+.person {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10rpx;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.online {
+  position: absolute;
+  right: 8rpx;
+  top: 78rpx;
+  width: 28rpx;
+  height: 28rpx;
+  border: 4rpx solid #ffffff;
+  border-radius: 50%;
+  background: #00d698;
+}
+
+.days-bubble {
+  position: relative;
+  min-width: 156rpx;
+  height: 82rpx;
+  border: 2rpx solid rgba(255, 255, 255, 0.34);
+  border-radius: 42rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8rpx;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.floating-heart {
+  position: absolute;
+  top: -64rpx;
+  font-size: 44rpx;
+}
+
+.days {
+  font-size: 44rpx;
+  font-weight: 900;
+}
+
+.unit {
+  font-size: 22rpx;
+  opacity: 0.9;
+}
+
+.since {
+  margin-top: 28rpx;
+  text-align: center;
+  font-size: 24rpx;
+}
+
+.content {
+  margin-top: -60rpx;
+  padding: 0 32rpx 140rpx;
+}
+
+.date-card {
+  padding: 26rpx 24rpx 34rpx;
+  overflow: hidden;
+}
+
+.card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: #465b7d;
+  font-size: 26rpx;
+  font-weight: 800;
+}
+
+.more {
+  color: #ff3867;
+  font-size: 24rpx;
+}
+
+.date-scroll {
+  margin-top: 22rpx;
+  white-space: nowrap;
+}
+
+.date-item {
+  width: 218rpx;
+  height: 218rpx;
+  margin-right: 18rpx;
+  border-radius: 24rpx;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.date-item.pink {
+  background: #fff0f6;
+}
+
+.date-item.purple {
+  background: #f4f1ff;
+}
+
+.date-item.blue {
+  background: #edf8ff;
+}
+
+.date-item.yellow {
+  background: #fff7df;
+}
+
+.date-icon {
+  font-size: 40rpx;
+}
+
+.date-title {
+  margin-top: 12rpx;
+  color: #596a87;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.date-days {
+  margin-top: 8rpx;
+  color: #ff3867;
+  font-size: 40rpx;
+  font-weight: 900;
+}
+
+.date-date {
+  color: #8192ad;
+  font-size: 22rpx;
+}
+
+.stats {
+  height: 160rpx;
+  margin-top: 26rpx;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #7185a4;
+  font-size: 22rpx;
+}
+
+.stat + .stat {
+  border-left: 1rpx solid #f0dde3;
+}
+
+.stat-value {
+  margin-top: 6rpx;
+  color: #ff3867;
+  font-size: 40rpx;
+  font-weight: 900;
+}
+
+.stat-label {
+  margin-top: 2rpx;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24rpx;
+}
+
+.feature,
+.goal-entry {
+  min-height: 208rpx;
+  border-radius: 28rpx;
+  padding: 34rpx;
+  color: #ffffff;
+  box-shadow: 0 12rpx 24rpx rgba(34, 28, 58, 0.14);
+}
+
+.feature.pink {
+  background: linear-gradient(135deg, #ff3f78, #e9348b);
+}
+
+.feature.purple {
+  background: linear-gradient(135deg, #9457ff, #6f35e8);
+}
+
+.feature.orange {
+  background: linear-gradient(135deg, #ffab00, #ed8500);
+}
+
+.feature.green {
+  background: linear-gradient(135deg, #05ca95, #0aa875);
+}
+
+.feature-icon {
+  font-size: 48rpx;
+}
+
+.feature-title {
+  margin-top: 18rpx;
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.feature-desc {
+  margin-top: 10rpx;
+  font-size: 24rpx;
+  opacity: 0.88;
+}
+
+.goal-entry {
+  margin-top: 24rpx;
+  display: grid;
+  grid-template-columns: 70rpx 1fr auto;
+  align-items: center;
+  gap: 16rpx;
+  background: linear-gradient(135deg, #3fc3ff, #7a6bff);
+}
+
+.mini-progress {
+  width: 220rpx;
+  height: 10rpx;
+  margin-top: 18rpx;
+  border-radius: 6rpx;
+  background: rgba(255, 255, 255, 0.38);
+}
+
+.mini-progress view {
+  width: 45%;
+  height: 100%;
+  border-radius: 6rpx;
+  background: #ffffff;
+}
+
+.goal-count {
+  align-self: end;
+  margin-bottom: 14rpx;
+  font-size: 24rpx;
+  font-weight: 900;
+}

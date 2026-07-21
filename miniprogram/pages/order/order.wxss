@@ -1,0 +1,173 @@
+.order-page {
+  background: #fff7f8;
+}
+
+.order-tabs {
+  border-bottom: 1rpx solid #d9f2e9;
+  padding-bottom: 18rpx;
+}
+
+.meal-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18rpx;
+  margin-top: 28rpx;
+}
+
+.meal-tabs view {
+  height: 82rpx;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #60738f;
+  background: #ffffff;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.meal-tabs .meal-active {
+  color: #ffffff;
+  background: #08c994;
+}
+
+.choose-row {
+  margin: 26rpx 0 20rpx;
+  display: flex;
+  justify-content: space-between;
+  color: #8799b4;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.choose-row text:last-child {
+  color: #08b985;
+}
+
+.dish-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20rpx;
+}
+
+.dish-card {
+  height: 164rpx;
+  border-radius: 22rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #152742;
+  font-size: 24rpx;
+  font-weight: 900;
+}
+
+.dish-card.selected {
+  border: 2rpx solid #08c994;
+  background: #eafff6;
+}
+
+.dish-card.random {
+  border: 3rpx dashed #95f0cd;
+  color: #08b985;
+  background: #eafff6;
+}
+
+.green-btn {
+  height: 88rpx;
+  margin-top: 28rpx;
+  border-radius: 44rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: #08c994;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.dish-icon {
+  margin-bottom: 14rpx;
+  font-size: 48rpx;
+}
+
+.manage-card {
+  min-height: 142rpx;
+  margin-top: 24rpx;
+  padding: 24rpx 28rpx;
+  display: grid;
+  grid-template-columns: 82rpx 1fr auto;
+  align-items: center;
+  gap: 18rpx;
+}
+
+.manage-info view {
+  color: #152742;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.manage-info text {
+  color: #7e8fab;
+  font-size: 23rpx;
+}
+
+.manage-actions {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.manage-actions text {
+  color: #ff5a78;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.add-dish {
+  height: 112rpx;
+  margin-top: 24rpx;
+  border: 3rpx dashed #95f0cd;
+  border-radius: 28rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #08b985;
+  background: #eafff6;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.history-card {
+  margin-top: 24rpx;
+  padding: 28rpx;
+}
+
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  color: #152742;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.history-head text:last-child {
+  color: #8d9bb2;
+  font-size: 24rpx;
+}
+
+.history-dishes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 24rpx;
+}
+
+.history-dishes text {
+  padding: 10rpx 20rpx;
+  border-radius: 22rpx;
+  color: #06a87d;
+  background: #eafff6;
+  font-size: 24rpx;
+  font-weight: 800;
+}

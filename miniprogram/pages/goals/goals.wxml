@@ -1,0 +1,69 @@
+<view class="page safe-bottom goals-page">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>••• WiFi ▪</text>
+  </view>
+  <view class="title-row goal-title-row">
+    <view bindtap="goBack" class="back-dot blue">‹</view>
+    <view class="page-title">两人小目标 <text>◎</text></view>
+    <view class="title-spacer"></view>
+  </view>
+
+  <view wx:if="{{showGoalForm}}" class="goal-form card">
+    <input bindinput="changeGoalTitle" value="{{goalForm.title}}" class="goal-input" placeholder="目标内容，例如一起存旅行基金" />
+    <input bindinput="changeGoalPeriod" value="{{goalForm.period}}" class="goal-input" placeholder="目标类型，例如储蓄、运动、阅读" />
+    <input bindinput="changeGoalTarget" value="{{goalForm.targetValue}}" type="number" class="goal-input" placeholder="目标数值，例如 10000" />
+    <input bindinput="changeGoalCurrent" value="{{goalForm.currentValue}}" type="number" class="goal-input" placeholder="当前数值，例如 0" />
+    <picker mode="date" value="{{goalForm.startDate}}" bindchange="changeGoalStart">
+      <view class="goal-form-row">
+        <text>设置日期</text>
+        <text>{{goalForm.startDate}}</text>
+      </view>
+    </picker>
+    <picker mode="date" value="{{goalForm.targetDate}}" bindchange="changeGoalTargetDate">
+      <view class="goal-form-row">
+        <text>达成日期</text>
+        <text>{{goalForm.targetDate}}</text>
+      </view>
+    </picker>
+    <view class="goal-form-actions">
+      <button bindtap="closeGoalForm" class="cancel-goal">取消</button>
+      <button bindtap="submitGoal" class="save-goal">保存目标</button>
+    </view>
+  </view>
+
+  <view class="pill-tabs">
+    <view bindtap="switchTab" data-key="active" class="pill-tab {{active === 'active' ? 'active-blue' : ''}}">进行中</view>
+    <view bindtap="switchTab" data-key="done" class="pill-tab {{active === 'done' ? 'active-blue' : ''}}">已完成</view>
+  </view>
+
+  <block wx:for="{{goals}}" wx:key="id">
+    <view wx:if="{{item.status === active}}" class="goal-card card">
+      <view class="goal-head">
+        <view class="goal-main">
+          <view class="goal-title">{{item.title}}</view>
+          <view class="goal-period">{{item.period}} · {{item.currentValue}} / {{item.targetValue}}</view>
+        </view>
+        <view class="goal-side">
+          <view class="remain">{{item.remainDays}}天</view>
+          <view bindtap="deleteGoal" data-id="{{item.id}}" class="goal-delete">删除</view>
+        </view>
+      </view>
+      <view class="progress-label">
+        <text>数值进度 {{item.progress}}%</text>
+        <text>时间进度 {{item.timeProgress}}%</text>
+      </view>
+      <view class="progress-line"><view style="width: {{item.progress}}%;"></view></view>
+      <view class="time-line"><view style="width: {{item.timeProgress}}%;"></view></view>
+      <view class="goal-foot">
+        <text class="goal-date">{{item.startDate}} 至 {{item.targetDate}}</text>
+        <view class="goal-actions">
+          <button wx:if="{{item.status === 'active'}}" bindtap="editGoalValue" data-id="{{item.id}}" class="update-btn">更新数值</button>
+          <button wx:if="{{item.status === 'active'}}" bindtap="finishGoal" data-id="{{item.id}}" class="finish-btn">完成</button>
+        </view>
+      </view>
+    </view>
+  </block>
+
+  <view bindtap="addGoal" class="add-goal">+ 新建目标</view>
+</view>

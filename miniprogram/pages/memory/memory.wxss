@@ -1,0 +1,222 @@
+.feed {
+  padding-top: 8rpx;
+  border-top: 1rpx solid #f1dce2;
+}
+
+.composer-card {
+  margin: 24rpx 0;
+  padding: 24rpx 24rpx 30rpx;
+  overflow: hidden;
+}
+
+.composer-text {
+  width: 100%;
+  min-height: 150rpx;
+  padding: 20rpx;
+  border-radius: 18rpx;
+  background: #fff6f8;
+  color: #203450;
+  font-size: 26rpx;
+  box-sizing: border-box;
+}
+
+.image-preview-wrap {
+  position: relative;
+  margin-top: 18rpx;
+}
+
+.image-preview {
+  width: 100%;
+  height: 260rpx;
+  border-radius: 18rpx;
+  background: #f4edf0;
+}
+
+.remove-image {
+  position: absolute;
+  top: 12rpx;
+  right: 12rpx;
+  width: 42rpx;
+  height: 42rpx;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  background: rgba(20, 38, 66, 0.62);
+  font-size: 30rpx;
+  font-weight: 900;
+}
+
+.composer-actions {
+  margin-top: 22rpx;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16rpx;
+}
+
+.image-btn,
+.publish-btn {
+  width: 100%;
+  min-width: 0;
+  height: 72rpx;
+  border-radius: 18rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.image-btn {
+  color: #ff4c76;
+  background: #fff0f4;
+}
+
+.publish-btn {
+  color: #ffffff;
+  background: #ff4c76;
+}
+
+.moment-card {
+  margin-top: 32rpx;
+  padding: 28rpx;
+}
+
+.moment-head {
+  display: flex;
+  align-items: center;
+}
+
+.avatar.small {
+  width: 76rpx;
+  height: 76rpx;
+  font-size: 30rpx;
+  box-shadow: none;
+}
+
+.moment-meta {
+  flex: 1;
+  margin-left: 18rpx;
+}
+
+.author {
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.time {
+  margin-top: 4rpx;
+  color: #8799b4;
+  font-size: 22rpx;
+}
+
+.moment-tag {
+  padding: 12rpx 22rpx;
+  border-radius: 28rpx;
+  color: #ff4c76;
+  background: #fff0f4;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.moment-text {
+  margin-top: 28rpx;
+  color: #213653;
+  font-size: 27rpx;
+  line-height: 1.7;
+}
+
+.moment-image {
+  width: 100%;
+  height: 256rpx;
+  margin-top: 24rpx;
+  border-radius: 18rpx;
+  background: #f4edf0;
+}
+
+.moment-actions {
+  display: flex;
+  gap: 44rpx;
+  margin-top: 30rpx;
+  padding-top: 24rpx;
+  border-top: 1rpx solid #f1edf0;
+  color: #8c9ab2;
+  font-size: 24rpx;
+  font-weight: 800;
+}
+
+.moment-actions .like {
+  color: #ff3867;
+}
+
+.timeline {
+  padding-top: 24rpx;
+}
+
+.time-group {
+  color: #8a6bff;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.timeline-item {
+  position: relative;
+  margin-left: 22rpx;
+  padding: 24rpx 0 0 36rpx;
+  border-left: 3rpx solid #f3d8e1;
+}
+
+.dot {
+  position: absolute;
+  left: -12rpx;
+  top: 46rpx;
+  width: 22rpx;
+  height: 22rpx;
+  border-radius: 50%;
+  background: #ff5a78;
+}
+
+.timeline-card {
+  padding: 24rpx;
+  color: #223856;
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.date-list {
+  padding-top: 12rpx;
+}
+
+.date-row {
+  min-height: 128rpx;
+  margin-top: 22rpx;
+  padding: 24rpx;
+  display: grid;
+  grid-template-columns: 72rpx 1fr auto;
+  align-items: center;
+  gap: 16rpx;
+}
+
+.date-icon {
+  font-size: 42rpx;
+}
+
+.date-title {
+  color: #203450;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.date-date {
+  margin-top: 8rpx;
+  color: #8799b4;
+  font-size: 22rpx;
+}
+
+.date-days {
+  color: #ff3867;
+  font-size: 34rpx;
+  font-weight: 900;
+}

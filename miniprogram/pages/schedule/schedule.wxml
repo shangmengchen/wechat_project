@@ -1,0 +1,70 @@
+<view class="page safe-bottom schedule-page">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>••• WiFi ▪</text>
+  </view>
+  <view class="title-row">
+    <view bindtap="goBack" class="back-dot">‹</view>
+    <view class="page-title">定时任务 <text>◎</text></view>
+    <view bindtap="addSchedule" class="add-mini">+</view>
+  </view>
+
+  <view wx:if="{{showScheduleForm}}" class="schedule-form card">
+    <input bindinput="changeScheduleTitle" value="{{scheduleForm.title}}" class="schedule-input" placeholder="例如：每周三扔垃圾" />
+    <picker range="{{cycleOptions}}" value="{{cycleIndex}}" bindchange="changeCycle">
+      <view class="schedule-form-row">
+        <text>周期</text>
+        <text>{{cycleOptions[cycleIndex]}}</text>
+      </view>
+    </picker>
+    <picker mode="time" value="{{scheduleForm.time}}" bindchange="changeScheduleTime">
+      <view class="schedule-form-row">
+        <text>提醒时间</text>
+        <text>{{scheduleForm.time}}</text>
+      </view>
+    </picker>
+    <picker range="{{assigneeOptions}}" value="{{assigneeIndex}}" bindchange="changeAssignee">
+      <view class="schedule-form-row">
+        <text>负责人</text>
+        <text>{{assigneeOptions[assigneeIndex]}}</text>
+      </view>
+    </picker>
+    <input wx:if="{{assigneeOptions[assigneeIndex] === '自定义'}}" bindinput="changeAssigneeCustom" value="{{scheduleForm.assigneeCustom}}" class="schedule-input" placeholder="输入自定义负责人" />
+    <view class="schedule-form-actions">
+      <button bindtap="closeScheduleForm" class="schedule-cancel">取消</button>
+      <button bindtap="submitSchedule" class="schedule-save">保存</button>
+    </view>
+  </view>
+
+  <view class="pill-tabs">
+    <view bindtap="switchTab" data-key="pending" class="pill-tab {{active === 'pending' ? 'active-yellow' : ''}}">待确认</view>
+    <view bindtap="switchTab" data-key="all" class="pill-tab {{active === 'all' ? 'active-yellow' : ''}}">全部任务</view>
+  </view>
+
+  <view wx:if="{{active === 'pending'}}" class="notice">
+    <view class="notice-icon">◎</view>
+    <view>
+      <view class="notice-title">今日待确认提醒</view>
+      <view class="notice-text">{{noticeText}}</view>
+    </view>
+  </view>
+
+  <block wx:for="{{schedules}}" wx:key="id">
+    <view wx:if="{{active === 'all' || item.pending}}" class="schedule-card card">
+      <view class="task-row">
+        <view class="clock">◎</view>
+        <view class="schedule-main">
+          <view class="schedule-title">{{item.title}}</view>
+          <view class="tags">
+            <text class="tag yellow">{{item.cycle}}</text>
+            <text class="tag">{{item.assignee}}</text>
+            <text class="tag">{{item.time}}</text>
+          </view>
+          <view class="next">下次提醒：<text>{{item.next}}</text></view>
+        </view>
+        <view bindtap="deleteSchedule" data-id="{{item.id}}" class="delete-dot">×</view>
+      </view>
+      <button wx:if="{{item.pending}}" bindtap="confirm" data-id="{{item.id}}" class="yellow-btn">✓ 确认完成</button>
+    </view>
+  </block>
+</view>

@@ -1,0 +1,43 @@
+<view class="pair-page safe-bottom">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>••• WiFi ▪</text>
+  </view>
+
+  <view class="pair-head">
+    <view class="pair-title">情侣配对 <text class="heart">♡</text></view>
+    <view class="pair-subtitle">与另一半建立你们的专属空间</view>
+  </view>
+
+  <view class="seg-card">
+    <view bindtap="generateCode" class="seg {{mode === 'generate' ? 'active' : ''}}">生成分享码</view>
+    <view bindtap="switchMode" data-mode="input" class="seg {{mode === 'input' ? 'active' : ''}}">输入分享码</view>
+  </view>
+
+  <view wx:if="{{mode === 'input'}}">
+    <view class="code-card card">
+      <view class="hint">请输入对方的 6 位分享码</view>
+      <view class="code-boxes">
+        <view wx:for="{{[0,1,2,3,4,5]}}" wx:key="*this" class="code-box">{{code[index] || ''}}</view>
+      </view>
+    </view>
+
+    <view class="keyboard">
+      <view wx:for="{{['1','2','3','4','5','6','7','8','9']}}" wx:key="*this" bindtap="tapKey" data-key="{{item}}" class="key">{{item}}</view>
+      <view></view>
+      <view bindtap="tapKey" data-key="0" class="key">0</view>
+      <view bindtap="deleteKey" class="key delete">⌫</view>
+    </view>
+
+    <button bindtap="confirmPair" class="confirm {{code.length === 6 ? 'ready' : ''}}">确认配对</button>
+  </view>
+
+  <view wx:else class="share-card card">
+    <view class="share-label">把分享码发给另一半</view>
+    <view class="share-code">{{generatedCode}}</view>
+    <view class="share-time">{{shareTime}}</view>
+    <button open-type="share" class="primary-btn">分享给 TA</button>
+  </view>
+
+  <view bindtap="enterDemo" class="skip">进入演示 →</view>
+</view>

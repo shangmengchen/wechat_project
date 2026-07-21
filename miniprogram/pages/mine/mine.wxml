@@ -1,0 +1,58 @@
+<view class="mine-page safe-bottom">
+  <view class="profile-hero">
+    <view class="status-row hero-status">
+      <text>9:41</text>
+      <text>••• WiFi ▫</text>
+    </view>
+    <view class="page-title mine-title">我的 <text>👤</text></view>
+    <view class="profile-row">
+      <view class="avatar big">{{users.me.avatarText}}</view>
+      <view class="edit-dot">✎</view>
+      <view class="profile-text">
+        <view class="name">{{users.me.name}}</view>
+        <view class="line">🎂 {{users.me.birthday}}</view>
+        <view class="line">ID: {{users.me.wxid}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="mine-content">
+    <view class="relation-card card">
+      <view class="relation-title">💑 我们的关系</view>
+      <view class="relation-row">
+        <view class="mini-person">
+          <view class="avatar small">{{users.me.avatarText}}</view>
+          <text>{{users.me.name}}</text>
+        </view>
+        <view class="relation-days">
+          <view>{{dashboard.loveDays}}</view>
+          <text>天</text>
+          <view class="date">{{dashboard.since}}</view>
+        </view>
+        <view class="mini-person">
+          <view class="avatar small dark">{{users.partner.avatarText}}</view>
+          <text>{{users.partner.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="section-title">设置</view>
+    <view class="setting-card card">
+      <picker mode="date" value="{{dashboard.since}}" bindchange="changeLoveDate">
+        <view class="setting-row"><text>💕 修改恋爱日期</text><text>{{dashboard.since}} ›</text></view>
+      </picker>
+      <picker mode="date" value="{{birthdayValue}}" bindchange="changeBirthday">
+        <view class="setting-row"><text>👤 编辑个人资料</text><text>{{users.me.birthday}} ›</text></view>
+      </picker>
+      <view class="setting-row"><text>🔔 通知设置</text><text>已开启 ›</text></view>
+    </view>
+
+    <view class="section-title">其他</view>
+    <view class="setting-card card">
+      <view class="setting-row"><text>ℹ️ 关于只有我们</text><text>v1.0.0 ›</text></view>
+      <view class="setting-row"><text>🔒 隐私政策</text><text>›</text></view>
+    </view>
+
+    <button bindtap="toggleExpanded" class="unbind {{expanded ? 'show' : ''}}">💔 解绑情侣关系</button>
+  </view>
+</view>

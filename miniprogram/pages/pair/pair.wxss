@@ -1,0 +1,160 @@
+.pair-page {
+  min-height: 100vh;
+  padding: 48rpx 48rpx 42rpx;
+  background: linear-gradient(160deg, #fff5f8 0%, #fff4f7 72%, #f0def4 100%);
+}
+
+.pair-head {
+  margin: 20rpx 0 44rpx;
+}
+
+.pair-title {
+  font-size: 46rpx;
+  font-weight: 900;
+  color: #112142;
+}
+
+.heart {
+  margin-left: 12rpx;
+}
+
+.pair-subtitle {
+  margin-top: 12rpx;
+  color: #8ca0bd;
+  font-size: 26rpx;
+}
+
+.seg-card {
+  height: 96rpx;
+  padding: 8rpx;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8rpx;
+  border-radius: 24rpx;
+  background: #ffffff;
+  box-shadow: 0 8rpx 18rpx rgba(70, 42, 54, 0.08);
+}
+
+.seg {
+  border-radius: 22rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #8496b3;
+  font-size: 27rpx;
+  font-weight: 800;
+}
+
+.seg.active {
+  color: #ffffff;
+  background: #ff5878;
+}
+
+.code-card {
+  margin-top: 40rpx;
+  padding: 52rpx 40rpx 56rpx;
+}
+
+.hint {
+  text-align: center;
+  color: #7185a4;
+  font-size: 26rpx;
+}
+
+.code-boxes {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 18rpx;
+  margin-top: 46rpx;
+}
+
+.code-box {
+  height: 92rpx;
+  border-radius: 20rpx;
+  border: 4rpx solid #dfe8f3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #112142;
+  background: #f8fbff;
+  font-size: 36rpx;
+  font-weight: 900;
+}
+
+.keyboard {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 22rpx;
+  margin-top: 30rpx;
+}
+
+.key {
+  height: 116rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #142643;
+  background: #ffffff;
+  box-shadow: 0 8rpx 18rpx rgba(70, 42, 54, 0.08);
+  font-size: 38rpx;
+  font-weight: 900;
+}
+
+.key.delete {
+  color: #ff5878;
+  background: #ffe0e6;
+}
+
+.confirm {
+  width: 100%;
+  height: 92rpx;
+  margin-top: 30rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff88a0;
+  background: #ffe0e6;
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.confirm.ready {
+  color: #ffffff;
+  background: #ff5878;
+}
+
+.share-card {
+  margin-top: 40rpx;
+  padding: 52rpx 40rpx;
+  text-align: center;
+}
+
+.share-label {
+  color: #7185a4;
+  font-size: 26rpx;
+}
+
+.share-code {
+  margin: 32rpx 0 10rpx;
+  color: #ff3867;
+  font-size: 74rpx;
+  font-weight: 900;
+  letter-spacing: 8rpx;
+}
+
+.share-time {
+  margin-bottom: 34rpx;
+  color: #8ca0bd;
+  font-size: 24rpx;
+}
+
+.skip {
+  margin-top: 86rpx;
+  text-align: center;
+  color: #8a68ff;
+  font-size: 26rpx;
+  font-weight: 800;
+}

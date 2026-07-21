@@ -1,0 +1,85 @@
+<view class="home-page safe-bottom">
+  <view class="hero">
+    <view class="status-row hero-status">
+      <text>9:41</text>
+      <text>••• WiFi ▫</text>
+    </view>
+    <view class="couple-row">
+      <view class="person">
+        <view class="avatar">{{users.me.avatarText}}</view>
+        <view class="online"></view>
+        <text>{{users.me.name}}</text>
+      </view>
+      <view class="days-bubble">
+        <view class="floating-heart">💕</view>
+        <text class="days">{{dashboard.loveDays}}</text>
+        <text class="unit">天</text>
+      </view>
+      <view class="person">
+        <view class="avatar dark">{{users.partner.avatarText}}</view>
+        <view class="online"></view>
+        <text>{{users.partner.name}}</text>
+      </view>
+    </view>
+    <view class="since">从 {{dashboard.since}} 相伴至今 ✨</view>
+  </view>
+
+  <view class="content">
+    <view class="date-card card">
+      <view class="card-head">
+        <text>🗓️ 重要日期倒计时</text>
+        <text class="more">查看全部 ›</text>
+      </view>
+      <scroll-view scroll-x class="date-scroll">
+        <view wx:for="{{dashboard.anniversaries}}" wx:key="title" class="date-item {{item.tone}}">
+          <view class="date-icon">{{item.icon}}</view>
+          <view class="date-title">{{item.title}}</view>
+          <view class="date-days">{{item.days}}</view>
+          <view class="date-date">{{item.date}}</view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <view class="stats card">
+      <view wx:for="{{dashboard.stats}}" wx:key="label" class="stat">
+        <view>{{item.icon}}</view>
+        <view class="stat-value">{{item.value}}</view>
+        <view class="stat-label">{{item.label}}</view>
+      </view>
+    </view>
+
+    <view class="section-title">✨ 功能入口</view>
+    <view class="feature-grid">
+      <view bindtap="go" data-url="/pages/memory/memory" class="feature pink">
+        <view class="feature-icon">📷</view>
+        <view class="feature-title">纪念分享</view>
+        <view class="feature-desc">记录每个美好瞬间</view>
+      </view>
+      <view bindtap="go" data-url="/pages/todos/todos" class="feature purple">
+        <view class="feature-icon">✅</view>
+        <view class="feature-title">需做列表</view>
+        <view class="feature-desc">任务分工与审核</view>
+      </view>
+      <view bindtap="go" data-url="/pages/schedule/schedule" class="feature orange">
+        <view class="feature-icon">⏰</view>
+        <view class="feature-title">定时任务</view>
+        <view class="feature-desc">家务提醒不忘事</view>
+      </view>
+      <view bindtap="go" data-url="/pages/order/order" class="feature green">
+        <view class="feature-icon">🍜</view>
+        <view class="feature-title">今日点餐</view>
+        <view class="feature-desc">解决吃什么难题</view>
+      </view>
+    </view>
+
+    <view bindtap="go" data-url="/pages/goal/goals" class="goal-entry">
+      <view class="feature-icon">🎯</view>
+      <view>
+        <view class="feature-title">两人小目标</view>
+        <view class="feature-desc">共同进步，一起成长</view>
+        <view class="mini-progress"><view style="width: {{dashboard.goalProgress || 0}}%;"></view></view>
+      </view>
+      <view class="goal-count">{{dashboard.activeGoals || 0}} 个进行中</view>
+    </view>
+  </view>
+</view>
