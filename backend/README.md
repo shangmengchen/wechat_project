@@ -27,7 +27,95 @@ One command for init + build + run:
 
 Override `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, or `PORT` if your local MySQL differs from the defaults.
 
-The server listens on `http://127.0.0.1:8080` by default. Tables are created automatically on startup, and demo data is seeded when the database is empty.
+The server listens on `http://127.0.0.1:8080` by default. On startup the app now does these automatically:
+
+- Creates the database when `MYSQL_CREATE_DATABASE=true`
+- Runs GORM auto-migration when `MYSQL_AUTO_MIGRATE=true`
+- Seeds demo data only when `MYSQL_AUTO_SEED=true` and the database is empty
+
+Recommended local defaults:
+
+```bash
+MYSQL_CREATE_DATABASE=true
+MYSQL_AUTO_MIGRATE=true
+MYSQL_AUTO_SEED=true
+```
+
+Recommended server defaults:
+
+```bash
+MYSQL_CREATE_DATABASE=true
+MYSQL_AUTO_MIGRATE=true
+MYSQL_AUTO_SEED=false
+```
+
+## Logs
+
+The backend now writes two log streams by default:
+
+- App log: `logs/app.log`
+- Access log: `logs/access.log`
+
+Each request gets an `X-Request-ID` response header, and both HTTP failures and panic recovery logs include that ID for troubleshooting. GORM logs SQL errors and slow queries with `LOG_SQL_LEVEL` and `LOG_SQL_SLOW_MS`.
+
+Useful log env vars:
+
+```bash
+LOG_LEVEL=info
+LOG_FORMAT=json
+LOG_DIR=logs
+LOG_APP_FILE=app.log
+LOG_ACCESS_FILE=access.log
+LOG_TO_STDOUT=true
+LOG_SQL_LEVEL=warn
+LOG_SQL_SLOW_MS=500
+```
+
+## Starter Deployment
+
+The starter cloud deployment files are included:
+
+- `Dockerfile`
+- `docker-compose.yml`
+- `.env.example`
+- `.env.docker.example`
+- `Caddyfile`
+- `DEPLOY.md`
+
+Basic flow:
+
+1. Copy `.env.example` to `.env` and fill in your real domain and passwords.
+2. Run `docker compose up -d --build`.
+3. Add `https://your-domain` to the WeChat legal request domain list.
+4. Check logs with `docker compose logs -f backend` and `docker compose logs -f caddy`.
+
+## One-Click Docker Start
+
+For local or first-server startup, you can now start only `mysql + backend` with one command.
+
+Windows PowerShell:
+
+```powershell
+.\docker-start.ps1 -Rebuild
+```
+
+Linux:
+
+```bash
+./docker-start.sh --build
+```
+
+Before running, make sure Docker Desktop or the Docker daemon is already running.
+
+Behavior:
+
+- Auto-creates `.env.docker` from `.env.docker.example` on first run
+- Starts MySQL container
+- Builds and starts backend container
+- Backend connects to MySQL automatically
+- Backend auto-creates database and tables
+
+By default the backend is exposed at `http://127.0.0.1:8080`.
 
 ## Main Endpoints
 
@@ -60,5 +148,6 @@ The server listens on `http://127.0.0.1:8080` by default. Tables are created aut
 - `POST /api/v1/orders`
 - `GET /api/v1/goals`
 - `POST /api/v1/goals`
+- `PATCH /api/v1/goals/{id}/value`
 - `PATCH /api/v1/goals/{id}/status`
 - `DELETE /api/v1/goals/{id}`

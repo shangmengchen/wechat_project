@@ -1,2 +1,7 @@
 .tmp/
 backend/bin/
+.cc-connect
+.cc-connect
+.cc-connect/config.toml
+backend/.env.docker
+backend/.env

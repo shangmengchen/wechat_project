@@ -4,6 +4,8 @@ import (
 	"errors"
 	"net/http"
 
+	"couple-mini/backend/internal/pkg/httpmw"
+	applog "couple-mini/backend/internal/pkg/logger"
 	"couple-mini/backend/internal/repo"
 
 	"github.com/gin-gonic/gin"
@@ -40,17 +42,34 @@ func fail(c *gin.Context, err error) {
 		status = http.StatusBadRequest
 		message = "already paired"
 	}
+	logRequestError(c, err, status, message)
 	c.JSON(status, gin.H{"code": status, "message": message})
 }
 
 func badRequest(c *gin.Context, message string) {
+	logRequestError(c, errors.New(message), http.StatusBadRequest, message)
 	c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": message})
 }
 
 func bindJSON(c *gin.Context, target any) bool {
 	if err := c.ShouldBindJSON(target); err != nil {
-		badRequest(c, "invalid json")
+		c.JSON(http.StatusBadRequest, gin.H{"code": http.StatusBadRequest, "message": "invalid json"})
+		logRequestError(c, err, http.StatusBadRequest, "invalid json")
 		return false
 	}
 	return true
+}
+
+func logRequestError(c *gin.Context, err error, status int, message string) {
+	entry := applog.L().With(
+		"request_id", httpmw.GetRequestID(c),
+		"status", status,
+		"method", c.Request.Method,
+		"path", c.Request.URL.Path,
+	)
+	if status >= http.StatusInternalServerError {
+		entry.Error("request failed", "message", message, "error", err.Error())
+		return
+	}
+	entry.Warn("request rejected", "message", message, "error", err.Error())
 }

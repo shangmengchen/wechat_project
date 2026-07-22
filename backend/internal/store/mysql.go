@@ -30,20 +30,25 @@ func NewMySQLStore(db *gorm.DB) *MySQLStore {
 	return &MySQLStore{db: db}
 }
 
-func (s *MySQLStore) EnsureSchema(ctx context.Context) error {
-	tx := s.db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
-	if err := tx.AutoMigrate(
-		&userModel{},
-		&coupleModel{},
-		&momentModel{},
-		&taskModel{},
-		&scheduledTaskModel{},
-		&dishModel{},
-		&orderModel{},
-		&orderDishModel{},
-		&goalModel{},
-	); err != nil {
-		return err
+func (s *MySQLStore) EnsureSchema(ctx context.Context, autoMigrate, autoSeed bool) error {
+	if autoMigrate {
+		tx := s.db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
+		if err := tx.AutoMigrate(
+			&userModel{},
+			&coupleModel{},
+			&momentModel{},
+			&taskModel{},
+			&scheduledTaskModel{},
+			&dishModel{},
+			&orderModel{},
+			&orderDishModel{},
+			&goalModel{},
+		); err != nil {
+			return err
+		}
+	}
+	if !autoSeed {
+		return nil
 	}
 	return s.seed(ctx)
 }

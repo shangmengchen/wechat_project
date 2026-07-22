@@ -6,6 +6,7 @@ import (
 	"couple-mini/backend/api"
 	"couple-mini/backend/configs"
 	"couple-mini/backend/internal/model"
+	"couple-mini/backend/internal/pkg/httpmw"
 	"couple-mini/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +20,8 @@ func SetRouter(svc *service.Service) *gin.Engine {
 
 	handler := api.New(svc)
 	r := gin.New()
-	r.Use(gin.Logger(), gin.Recovery(), cors())
+	_ = r.SetTrustedProxies(nil)
+	r.Use(httpmw.RequestID(), httpmw.AccessLog(), httpmw.Recovery(), cors())
 	r.Static("/uploads", "./uploads")
 
 	r.GET("/healthz", handler.Health)

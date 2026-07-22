@@ -24,8 +24,8 @@ func New(db *gorm.DB) *Repo {
 	return &Repo{store: store.NewMySQLStore(db)}
 }
 
-func (r *Repo) EnsureSchema(ctx context.Context) error {
-	return r.store.EnsureSchema(ctx)
+func (r *Repo) EnsureSchema(ctx context.Context, autoMigrate, autoSeed bool) error {
+	return r.store.EnsureSchema(ctx, autoMigrate, autoSeed)
 }
 
 func (r *Repo) Login(openid, nickname string) (model.User, error) {

@@ -1,0 +1,99 @@
+package httpmw
+
+import (
+	"crypto/rand"
+	"encoding/hex"
+	"fmt"
+	"net/http"
+	"runtime/debug"
+	"time"
+
+	applog "couple-mini/backend/internal/pkg/logger"
+
+	"github.com/gin-gonic/gin"
+)
+
+const requestIDKey = "request_id"
+
+func RequestID() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		requestID := c.GetHeader("X-Request-ID")
+		if requestID == "" {
+			requestID = newRequestID()
+		}
+		c.Set(requestIDKey, requestID)
+		c.Writer.Header().Set("X-Request-ID", requestID)
+		c.Next()
+	}
+}
+
+func AccessLog() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		start := time.Now()
+		c.Next()
+
+		latency := time.Since(start)
+		entry := applog.Access().With(
+			"request_id", GetRequestID(c),
+			"method", c.Request.Method,
+			"path", c.Request.URL.Path,
+			"route", c.FullPath(),
+			"query", c.Request.URL.RawQuery,
+			"status", c.Writer.Status(),
+			"latency_ms", latency.Milliseconds(),
+			"client_ip", c.ClientIP(),
+			"remote_addr", c.Request.RemoteAddr,
+			"x_forwarded_for", c.GetHeader("X-Forwarded-For"),
+			"user_agent", c.Request.UserAgent(),
+			"response_bytes", c.Writer.Size(),
+		)
+
+		switch {
+		case c.Writer.Status() >= http.StatusInternalServerError:
+			entry.Error("http request completed", "errors", c.Errors.String())
+		case c.Writer.Status() >= http.StatusBadRequest:
+			entry.Warn("http request completed", "errors", c.Errors.String())
+		default:
+			entry.Info("http request completed")
+		}
+	}
+}
+
+func Recovery() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				applog.L().Error("panic recovered",
+					"request_id", GetRequestID(c),
+					"method", c.Request.Method,
+					"path", c.Request.URL.Path,
+					"client_ip", c.ClientIP(),
+					"panic", fmt.Sprint(recovered),
+					"stack", string(debug.Stack()),
+				)
+				c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{
+					"code":    http.StatusInternalServerError,
+					"message": "internal server error",
+				})
+			}
+		}()
+		c.Next()
+	}
+}
+
+func GetRequestID(c *gin.Context) string {
+	if value, ok := c.Get(requestIDKey); ok {
+		if requestID, ok := value.(string); ok {
+			return requestID
+		}
+	}
+	return ""
+}
+
+func newRequestID() string {
+	var buf [12]byte
+	if _, err := rand.Read(buf[:]); err == nil {
+		return hex.EncodeToString(buf[:])
+	}
+	return fmt.Sprintf("%d", time.Now().UnixNano())
+}

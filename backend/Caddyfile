@@ -1,0 +1,30 @@
+{
+	email {$LETSENCRYPT_EMAIL}
+	admin off
+}
+
+{$APP_DOMAIN} {
+	encode zstd gzip
+
+	request_body {
+		max_size 20MB
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options SAMEORIGIN
+		Referrer-Policy no-referrer-when-downgrade
+	}
+
+	log {
+		output file /var/log/caddy/access.log
+		format json
+	}
+
+	reverse_proxy backend:8080 {
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Real-IP {remote_host}
+		health_uri /healthz
+	}
+}

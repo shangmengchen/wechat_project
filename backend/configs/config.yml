@@ -10,6 +10,20 @@ db:
   user: "root"
   password: "password"
   dbname: "couple_mini"
+  create_db: true
+  auto_migrate: true
+  auto_seed: true
   max_idle_conn: 10
   max_open_conn: 25
   max_idle_time: 1800
+
+log:
+  level: "info"
+  format: "json"
+  directory: "logs"
+  app_file: "app.log"
+  access_file: "access.log"
+  also_stdout: true
+  sql_level: "warn"
+  sql_slow_ms: 500
+  include_source: false
