@@ -34,7 +34,7 @@ else
 fi
 
 mkdir -p bin
-"$GO_BIN" build -trimpath -o bin/backend ./cmd/server
+"$GO_BIN" build -trimpath -o bin/backend .
 
 echo "Backend ready. Listening on http://127.0.0.1:$APP_PORT"
 exec ./bin/backend

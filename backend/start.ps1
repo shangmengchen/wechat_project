@@ -55,7 +55,7 @@ $BinDir = Join-Path $ScriptDir "bin"
 New-Item -ItemType Directory -Force -Path $BinDir | Out-Null
 $Binary = Join-Path $BinDir "backend.exe"
 
-& $GoExe build -trimpath -o $Binary ./cmd/server
+& $GoExe build -trimpath -o $Binary .
 if ($LASTEXITCODE -ne 0) {
   throw "go build failed"
 }

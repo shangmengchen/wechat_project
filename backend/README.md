@@ -2,6 +2,17 @@
 
 Gin + GORM + MySQL REST API for the couple mini program.
 
+The backend now follows a `ppm_web_go`-style layered layout:
+
+- `main.go` / `cmd/server/main.go`
+- `configs/`
+- `router/`
+- `api/`
+- `internal/service/`
+- `internal/repo/`
+- `internal/model/`
+- `internal/pkg/gormcli/`
+
 ## MySQL
 
 One command for init + build + run:

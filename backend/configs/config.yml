@@ -1,0 +1,15 @@
+app:
+  app_name: "couple-mini-backend"
+  version: "v0.0.1"
+  port: 8080
+  run_mode: "release"
+
+db:
+  host: "127.0.0.1"
+  port: "3306"
+  user: "root"
+  password: "password"
+  dbname: "couple_mini"
+  max_idle_conn: 10
+  max_open_conn: 25
+  max_idle_time: 1800
