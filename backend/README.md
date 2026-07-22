@@ -1,21 +1,20 @@
 # Couple Mini Backend
 
-Gin + MySQL REST API for the couple mini program.
+Gin + GORM + MySQL REST API for the couple mini program.
 
 ## MySQL
 
-Create the database first:
-
-```sql
-CREATE DATABASE couple_mini DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-Then run:
+One command for init + build + run:
 
 ```bash
-set MYSQL_DSN=root:password@tcp(127.0.0.1:3306)/couple_mini?charset=utf8mb4&parseTime=true&loc=Local
-go run ./cmd/server
+# Linux
+./start.sh
+
+# Windows PowerShell
+.\start.ps1
 ```
+
+Override `MYSQL_HOST`, `MYSQL_PORT`, `MYSQL_USER`, `MYSQL_PASSWORD`, `MYSQL_DATABASE`, or `PORT` if your local MySQL differs from the defaults.
 
 The server listens on `http://127.0.0.1:8080` by default. Tables are created automatically on startup, and demo data is seeded when the database is empty.
 

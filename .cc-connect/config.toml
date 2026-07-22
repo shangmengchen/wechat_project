@@ -1,0 +1,23 @@
+data_dir = "E:/code/go/project/my_project/wechat_project/.cc-connect/data"
+
+[log]
+level = "info"
+
+[[projects]]
+name = "wechat_project"
+
+[projects.agent]
+type = "codex"
+
+[projects.agent.options]
+work_dir = "E:/code/go/project/my_project/wechat_project"
+mode = "suggest"
+
+[[projects.platforms]]
+type = "weixin"
+
+[projects.platforms.options]
+token = ""
+base_url = "https://ilinkai.weixin.qq.com"
+allow_from = "*"
+account_id = "default"
