@@ -1,7 +1,8 @@
 bin
 logs
 uploads
-.env
+scripts/.env
+scripts/.env.docker
 .git
 *.exe
 admin-ui/node_modules

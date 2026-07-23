@@ -26,6 +26,7 @@ const dashboard = {
 };
 
 let pairTicket = null;
+const PAIR_CODE_TTL_MS = 20 * 60 * 1000;
 
 function updateDashboard() {
   const loveDate = parseDate(dashboard.since);
@@ -81,12 +82,23 @@ function updateUserProfile(id, data = {}) {
 }
 
 function generatePairCode(userId) {
+  const ownerId = userId || users.me.id;
+  if (pairTicket && pairTicket.userAId === ownerId && new Date(pairTicket.codeExpireAt).getTime() > Date.now()) {
+    return {
+      id: "c1",
+      userAId: pairTicket.userAId,
+      userBId: "",
+      loveDate: dashboard.since,
+      pairCode: pairTicket.code,
+      codeExpireAt: pairTicket.codeExpireAt
+    };
+  }
   const code = String(Math.floor(100000 + Math.random() * 900000));
-  const codeExpireAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const codeExpireAt = new Date(Date.now() + PAIR_CODE_TTL_MS).toISOString();
   pairTicket = {
     code,
     codeExpireAt,
-    userAId: userId || users.me.id
+    userAId: ownerId
   };
   return {
     id: "c1",

@@ -7,7 +7,12 @@ Page({
     code: "",
     generatedCode: "",
     shareTime: "",
+    shareExpireAt: "",
     keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
+  },
+
+  onShow() {
+    this.refreshShareTime();
   },
 
   switchMode(e) {
@@ -24,6 +29,14 @@ Page({
   },
 
   generateCode() {
+    if (hasActiveShareCode(this.data)) {
+      this.setData({
+        mode: "generate",
+        shareTime: expireText(this.data.shareExpireAt)
+      });
+      wx.showToast({ title: "当前分享码仍在20分钟有效期内", icon: "none" });
+      return;
+    }
     const app = getApp();
     api.generatePairCode(app.globalData.currentUserId).then((ret) => {
       if (!isOk(ret)) {
@@ -33,6 +46,7 @@ Page({
       const data = ret.data || ret;
       this.setData({
         generatedCode: data.pairCode || "",
+        shareExpireAt: data.codeExpireAt || "",
         shareTime: expireText(data.codeExpireAt),
         mode: "generate"
       });
@@ -62,6 +76,21 @@ Page({
   enterDemo() {
     session.enterDemo();
     wx.switchTab({ url: "/pages/home/home" });
+  },
+
+  refreshShareTime() {
+    if (!this.data.shareExpireAt) return;
+    if (!hasActiveShareCode(this.data)) {
+      this.setData({
+        generatedCode: "",
+        shareExpireAt: "",
+        shareTime: ""
+      });
+      return;
+    }
+    this.setData({
+      shareTime: expireText(this.data.shareExpireAt)
+    });
   }
 });
 
@@ -74,9 +103,14 @@ function pairErrorText(ret = {}) {
 }
 
 function expireText(value) {
-  const expire = value ? new Date(value).getTime() : Date.now() + 24 * 60 * 60 * 1000;
+  const expire = value ? new Date(value).getTime() : Date.now() + 20 * 60 * 1000;
   const remain = Math.max(0, expire - Date.now());
-  const hours = Math.floor(remain / 3600000);
-  const minutes = Math.floor((remain % 3600000) / 60000);
-  return `有效期 ${hours}小时${minutes}分钟`;
+  if (remain <= 0) return "分享码已过期";
+  const minutes = Math.ceil(remain / 60000);
+  return `有效期剩余 ${minutes} 分钟`;
+}
+
+function hasActiveShareCode(data = {}) {
+  if (!data.generatedCode || !data.shareExpireAt) return false;
+  return new Date(data.shareExpireAt).getTime() > Date.now();
 }

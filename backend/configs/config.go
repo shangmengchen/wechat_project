@@ -44,6 +44,7 @@ type LogConfig struct {
 	Directory     string `yaml:"directory"`
 	AppFile       string `yaml:"app_file"`
 	AccessFile    string `yaml:"access_file"`
+	ErrorFile     string `yaml:"error_file"`
 	AlsoStdout    bool   `yaml:"also_stdout"`
 	SQLLevel      string `yaml:"sql_level"`
 	SQLSlowMS     int    `yaml:"sql_slow_ms"`
@@ -102,9 +103,10 @@ func defaultConfig() GlobalConfig {
 		LogConfig: LogConfig{
 			Level:         "info",
 			Format:        "json",
-			Directory:     "logs",
+			Directory:     "logs/backend",
 			AppFile:       "app.log",
 			AccessFile:    "access.log",
+			ErrorFile:     "error.log",
 			AlsoStdout:    true,
 			SQLLevel:      "warn",
 			SQLSlowMS:     500,
@@ -200,6 +202,9 @@ func overrideFromEnv(cfg *GlobalConfig) {
 	}
 	if value := os.Getenv("LOG_ACCESS_FILE"); value != "" {
 		cfg.LogConfig.AccessFile = value
+	}
+	if value := os.Getenv("LOG_ERROR_FILE"); value != "" {
+		cfg.LogConfig.ErrorFile = value
 	}
 	if value, ok := envBool("LOG_TO_STDOUT"); ok {
 		cfg.LogConfig.AlsoStdout = value

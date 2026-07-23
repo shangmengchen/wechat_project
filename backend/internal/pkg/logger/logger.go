@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -28,14 +29,24 @@ func Init(cfg configs.LogConfig) error {
 
 	closeLocked()
 
-	appWriter, appCloser, err := buildWriter(cfg.Directory, cfg.AppFile, cfg.AlsoStdout)
+	appWriter, appCloser, err := buildWriter(cfg.Directory, cfg.AppFile, cfg.AlsoStdout, true)
 	if err != nil {
 		return err
 	}
-	accessWriter, accessCloser, err := buildWriter(cfg.Directory, cfg.AccessFile, cfg.AlsoStdout)
+	accessWriter, accessCloser, err := buildWriter(cfg.Directory, cfg.AccessFile, cfg.AlsoStdout, true)
 	if err != nil {
 		if appCloser != nil {
 			_ = appCloser.Close()
+		}
+		return err
+	}
+	errorWriter, errorCloser, err := buildWriter(cfg.Directory, cfg.ErrorFile, false, false)
+	if err != nil {
+		if appCloser != nil {
+			_ = appCloser.Close()
+		}
+		if accessCloser != nil {
+			_ = accessCloser.Close()
 		}
 		return err
 	}
@@ -46,8 +57,18 @@ func Init(cfg configs.LogConfig) error {
 	if accessCloser != nil {
 		closers = append(closers, accessCloser)
 	}
+	if errorCloser != nil {
+		closers = append(closers, errorCloser)
+	}
 
-	appLogger = slog.New(newHandler(appWriter, cfg, parseLevel(cfg.Level))).With("stream", "app")
+	appHandlers := []slog.Handler{
+		newHandler(appWriter, cfg, parseLevel(cfg.Level)),
+	}
+	if cfg.ErrorFile != "" {
+		appHandlers = append(appHandlers, newHandler(errorWriter, cfg, slog.LevelError))
+	}
+
+	appLogger = slog.New(newTeeHandler(appHandlers...)).With("stream", "app")
 	accessLogger = slog.New(newHandler(accessWriter, cfg, slog.LevelInfo)).With("stream", "access")
 	if cfg.AppFile != "" {
 		appLogPath = filepath.Join(cfg.Directory, cfg.AppFile)
@@ -153,7 +174,7 @@ func toString(value any) string {
 	}
 }
 
-func buildWriter(dir, file string, alsoStdout bool) (io.Writer, io.Closer, error) {
+func buildWriter(dir, file string, alsoStdout, fallbackStdout bool) (io.Writer, io.Closer, error) {
 	writers := make([]io.Writer, 0, 2)
 	var closer io.Closer
 
@@ -169,12 +190,63 @@ func buildWriter(dir, file string, alsoStdout bool) (io.Writer, io.Closer, error
 		closer = f
 	}
 	if alsoStdout || len(writers) == 0 {
-		writers = append(writers, os.Stdout)
+		if alsoStdout || fallbackStdout {
+			writers = append(writers, os.Stdout)
+		}
+	}
+	if len(writers) == 0 {
+		return io.Discard, closer, nil
 	}
 	if len(writers) == 1 {
 		return writers[0], closer, nil
 	}
 	return io.MultiWriter(writers...), closer, nil
+}
+
+type teeHandler struct {
+	handlers []slog.Handler
+}
+
+func newTeeHandler(handlers ...slog.Handler) slog.Handler {
+	return &teeHandler{handlers: handlers}
+}
+
+func (t *teeHandler) Enabled(ctx context.Context, level slog.Level) bool {
+	for _, handler := range t.handlers {
+		if handler.Enabled(ctx, level) {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *teeHandler) Handle(ctx context.Context, record slog.Record) error {
+	var errs []error
+	for _, handler := range t.handlers {
+		if !handler.Enabled(ctx, record.Level) {
+			continue
+		}
+		if err := handler.Handle(ctx, record.Clone()); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+func (t *teeHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	handlers := make([]slog.Handler, 0, len(t.handlers))
+	for _, handler := range t.handlers {
+		handlers = append(handlers, handler.WithAttrs(attrs))
+	}
+	return &teeHandler{handlers: handlers}
+}
+
+func (t *teeHandler) WithGroup(name string) slog.Handler {
+	handlers := make([]slog.Handler, 0, len(t.handlers))
+	for _, handler := range t.handlers {
+		handlers = append(handlers, handler.WithGroup(name))
+	}
+	return &teeHandler{handlers: handlers}
 }
 
 func newHandler(writer io.Writer, cfg configs.LogConfig, level slog.Level) slog.Handler {

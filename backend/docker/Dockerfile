@@ -1,3 +1,13 @@
+FROM node:20-alpine AS admin-build
+
+WORKDIR /src/admin-ui
+
+COPY admin-ui/package.json admin-ui/package-lock.json ./
+RUN npm ci
+
+COPY admin-ui ./
+RUN npm run build
+
 FROM golang:1.22-alpine AS build
 
 WORKDIR /src
@@ -17,8 +27,9 @@ RUN apk add --no-cache ca-certificates tzdata wget
 
 COPY --from=build /out/backend /app/backend
 COPY configs /app/configs
+COPY --from=admin-build /src/web /app/web
 
-RUN mkdir -p /app/uploads /app/logs
+RUN mkdir -p /app/uploads /app/logs /app/web/admin
 
 EXPOSE 8080
 

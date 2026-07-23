@@ -20,9 +20,10 @@ db:
 log:
   level: "info"
   format: "json"
-  directory: "logs"
+  directory: "logs/backend"
   app_file: "app.log"
   access_file: "access.log"
+  error_file: "error.log"
   also_stdout: true
   sql_level: "warn"
   sql_slow_ms: 500

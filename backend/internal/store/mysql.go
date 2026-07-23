@@ -22,6 +22,8 @@ var (
 	ErrAlreadyPaired   = errors.New("already paired")
 )
 
+const pairCodeTTL = 20 * time.Minute
+
 type MySQLStore struct {
 	db *gorm.DB
 }
@@ -75,15 +77,20 @@ func (s *MySQLStore) Login(openid, nickname string) (domain.User, error) {
 }
 
 func (s *MySQLStore) GeneratePairCode(userID string) (domain.Couple, error) {
-	code, err := s.uniquePairCode()
-	if err != nil {
-		return domain.Couple{}, err
-	}
-	expireAt := time.Now().Add(24 * time.Hour)
+	now := time.Now()
 
 	var pending coupleModel
-	err = s.db.Where("user_a_id = ? AND user_b_id = ''", userID).Order("created_at DESC").Take(&pending).Error
+	err := s.db.Where("user_a_id = ? AND user_b_id = ''", userID).Order("created_at DESC").Take(&pending).Error
 	if err == nil {
+		if pending.PairCode != "" && pending.CodeExpireAt != nil && pending.CodeExpireAt.After(now) {
+			return toCouple(pending), nil
+		}
+
+		code, err := s.uniquePairCode()
+		if err != nil {
+			return domain.Couple{}, err
+		}
+		expireAt := now.Add(pairCodeTTL)
 		updates := map[string]any{
 			"pair_code":      code,
 			"code_expire_at": expireAt,
@@ -104,6 +111,12 @@ func (s *MySQLStore) GeneratePairCode(userID string) (domain.Couple, error) {
 	if paired > 0 {
 		return domain.Couple{}, ErrAlreadyPaired
 	}
+
+	code, err := s.uniquePairCode()
+	if err != nil {
+		return domain.Couple{}, err
+	}
+	expireAt := now.Add(pairCodeTTL)
 
 	couple := coupleModel{
 		ID:           newID("c"),

@@ -30,7 +30,7 @@
     }
   },
   "compileType": "miniprogram",
-  "libVersion": "latest",
+  "libVersion": "3.15.0",
   "appid": "wxa7a74d3bbccceafd",
   "projectname": "couple-mini-program",
   "condition": {},
