@@ -1,7 +1,9 @@
 .pair-page {
   min-height: 100vh;
   padding: 48rpx 48rpx 42rpx;
-  background: linear-gradient(160deg, #fff5f8 0%, #fff4f7 72%, #f0def4 100%);
+  background:
+    radial-gradient(circle at top left, rgba(255, 255, 255, 0.75) 0, rgba(255, 255, 255, 0) 32%),
+    linear-gradient(160deg, #fff7f8 0%, #fff0f4 58%, #ffe4e6 100%);
 }
 
 .pair-head {
@@ -16,6 +18,7 @@
 
 .heart {
   margin-left: 12rpx;
+  color: #ff5f87;
 }
 
 .pair-subtitle {
@@ -31,8 +34,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 8rpx;
   border-radius: 24rpx;
-  background: #ffffff;
-  box-shadow: 0 8rpx 18rpx rgba(70, 42, 54, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 12rpx 28rpx rgba(97, 61, 74, 0.10);
 }
 
 .seg {
@@ -47,7 +50,7 @@
 
 .seg.active {
   color: #ffffff;
-  background: #ff5878;
+  background: linear-gradient(135deg, #ff6d92 0%, #ff5a7b 100%);
 }
 
 .code-card {
@@ -96,7 +99,7 @@
   justify-content: center;
   color: #142643;
   background: #ffffff;
-  box-shadow: 0 8rpx 18rpx rgba(70, 42, 54, 0.08);
+  box-shadow: 0 10rpx 22rpx rgba(70, 42, 54, 0.08);
   font-size: 38rpx;
   font-weight: 900;
 }
@@ -104,6 +107,7 @@
 .key.delete {
   color: #ff5878;
   background: #ffe0e6;
+  font-size: 28rpx;
 }
 
 .confirm {
@@ -123,22 +127,51 @@
 
 .confirm.ready {
   color: #ffffff;
-  background: #ff5878;
+  background: linear-gradient(135deg, #ff698c 0%, #ff5377 100%);
 }
 
 .share-card {
   margin-top: 40rpx;
-  padding: 52rpx 40rpx;
+  padding: 42rpx 38rpx 40rpx;
   text-align: center;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 247, 249, 0.96) 100%);
+  box-shadow: 0 16rpx 36rpx rgba(100, 58, 76, 0.12);
+}
+
+.share-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20rpx;
 }
 
 .share-label {
-  color: #7185a4;
+  color: #4d5f7f;
   font-size: 26rpx;
+  font-weight: 700;
+  text-align: left;
+}
+
+.share-badge {
+  padding: 10rpx 18rpx;
+  border-radius: 999rpx;
+  font-size: 22rpx;
+  font-weight: 800;
+}
+
+.share-badge.active {
+  color: #ff4f7b;
+  background: #ffe4ec;
+}
+
+.share-badge.expired {
+  color: #8b6d28;
+  background: #fff1ca;
 }
 
 .share-code {
-  margin: 32rpx 0 10rpx;
+  margin: 28rpx 0 12rpx;
   color: #ff3867;
   font-size: 74rpx;
   font-weight: 900;
@@ -146,9 +179,59 @@
 }
 
 .share-time {
-  margin-bottom: 34rpx;
-  color: #8ca0bd;
+  color: #4f6281;
+  font-size: 28rpx;
+  font-weight: 700;
+}
+
+.share-rule {
+  margin: 22rpx 0 30rpx;
+  padding: 24rpx 24rpx;
+  border-radius: 24rpx;
+  background: rgba(255, 238, 243, 0.92);
+  color: #7f6280;
   font-size: 24rpx;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.share-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18rpx;
+}
+
+.share-action {
+  width: 100%;
+  height: 92rpx;
+  border-radius: 24rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.primary-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff6d92 0%, #ff5b7e 100%);
+  box-shadow: 0 12rpx 24rpx rgba(255, 96, 136, 0.24);
+}
+
+.secondary-btn {
+  border: 2rpx solid rgba(255, 103, 141, 0.20);
+  background: #ffffff;
+}
+
+.secondary-btn.ready {
+  color: #ff5e83;
+}
+
+.secondary-btn.disabled {
+  color: #b8a7b0;
+  background: #f8f2f4;
+  border-color: rgba(184, 167, 176, 0.14);
 }
 
 .skip {

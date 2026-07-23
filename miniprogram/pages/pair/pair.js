@@ -8,11 +8,24 @@ Page({
     generatedCode: "",
     shareTime: "",
     shareExpireAt: "",
+    shareStatusText: "",
+    shareRuleText: "",
+    canRegenerate: true,
+    regenerateButtonText: "重新生成分享码",
     keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
   },
 
   onShow() {
+    this.startShareTimer();
     this.refreshShareTime();
+  },
+
+  onHide() {
+    this.stopShareTimer();
+  },
+
+  onUnload() {
+    this.stopShareTimer();
   },
 
   switchMode(e) {
@@ -78,18 +91,45 @@ Page({
     wx.switchTab({ url: "/pages/home/home" });
   },
 
+  startShareTimer() {
+    this.stopShareTimer();
+    this.shareTimer = setInterval(() => {
+      this.refreshShareTime();
+    }, 30000);
+  },
+
+  stopShareTimer() {
+    if (!this.shareTimer) return;
+    clearInterval(this.shareTimer);
+    this.shareTimer = null;
+  },
+
   refreshShareTime() {
-    if (!this.data.shareExpireAt) return;
+    if (!this.data.shareExpireAt || !this.data.generatedCode) {
+      this.setData({
+        shareStatusText: "",
+        shareRuleText: "",
+        canRegenerate: true,
+        regenerateButtonText: "重新生成分享码"
+      });
+      return;
+    }
     if (!hasActiveShareCode(this.data)) {
       this.setData({
-        generatedCode: "",
-        shareExpireAt: "",
-        shareTime: ""
+        shareTime: "分享码已过期",
+        shareStatusText: "已过期",
+        shareRuleText: "可以重新生成新的分享码，对方需要使用最新的 6 位分享码完成配对。",
+        canRegenerate: true,
+        regenerateButtonText: "重新生成分享码"
       });
       return;
     }
     this.setData({
-      shareTime: expireText(this.data.shareExpireAt)
+      shareTime: expireText(this.data.shareExpireAt),
+      shareStatusText: "有效中",
+      shareRuleText: "分享码在 20 分钟内有效，有效期内不会重复生成，请直接把当前这组分享码发给对方。",
+      canRegenerate: false,
+      regenerateButtonText: "20 分钟内不可重复生成"
     });
   }
 });
