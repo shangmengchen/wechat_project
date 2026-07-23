@@ -29,6 +29,7 @@ This is the recommended first production setup for the current project:
 
 ```bash
 docker compose up -d --build
+```
 
 If you only want database + backend first, without HTTPS reverse proxy yet:
 
@@ -40,7 +41,6 @@ Or use the one-click scripts:
 
 ```bash
 ./docker-start.sh --build
-```
 ```
 
 ## Runtime Behavior

@@ -32,6 +32,9 @@ type Repository interface {
 	UpdateGoalValue(id string, currentValue int) (model.Goal, error)
 	UpdateGoalStatus(id, status string) (model.Goal, error)
 	DeleteGoal(id string) error
+	AdminOverview() (model.AdminOverview, error)
+	AdminRecentUsers(limit int) ([]model.AdminUserSummary, error)
+	AdminRecentCouples(limit int) ([]model.AdminCoupleSummary, error)
 }
 
 type Service struct {

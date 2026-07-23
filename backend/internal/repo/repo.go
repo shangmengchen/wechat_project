@@ -143,3 +143,15 @@ func (r *Repo) UpdateGoalStatus(id, status string) (model.Goal, error) {
 func (r *Repo) DeleteGoal(id string) error {
 	return r.store.DeleteGoal(id)
 }
+
+func (r *Repo) AdminOverview() (model.AdminOverview, error) {
+	return r.store.AdminOverview()
+}
+
+func (r *Repo) AdminRecentUsers(limit int) ([]model.AdminUserSummary, error) {
+	return r.store.AdminRecentUsers(limit)
+}
+
+func (r *Repo) AdminRecentCouples(limit int) ([]model.AdminCoupleSummary, error) {
+	return r.store.AdminRecentCouples(limit)
+}

@@ -142,3 +142,78 @@ type UserLite struct {
 	Birthday   string `json:"birthday"`
 	WxID       string `json:"wxid"`
 }
+
+type AdminOverview struct {
+	TotalUsers       int `json:"totalUsers"`
+	PairedCouples    int `json:"pairedCouples"`
+	PendingPairCodes int `json:"pendingPairCodes"`
+	TotalMoments     int `json:"totalMoments"`
+	OpenTasks        int `json:"openTasks"`
+	ActiveGoals      int `json:"activeGoals"`
+	TotalOrders      int `json:"totalOrders"`
+	EnabledDishes    int `json:"enabledDishes"`
+	ScheduledTasks   int `json:"scheduledTasks"`
+	NewUsers24h      int `json:"newUsers24h"`
+	NewCouples7d     int `json:"newCouples7d"`
+}
+
+type AdminUserSummary struct {
+	ID        string    `json:"id"`
+	Nickname  string    `json:"nickname"`
+	Avatar    string    `json:"avatar"`
+	WxID      string    `json:"wxid"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
+type AdminCoupleSummary struct {
+	ID           string    `json:"id"`
+	UserAID      string    `json:"userAId"`
+	UserBID      string    `json:"userBId"`
+	LoveDate     string    `json:"loveDate"`
+	PairCode     string    `json:"pairCode,omitempty"`
+	CodeExpireAt time.Time `json:"codeExpireAt,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
+type AdminSystemPoint struct {
+	Timestamp       time.Time `json:"timestamp"`
+	CPUPercent      float64   `json:"cpuPercent"`
+	MemoryPercent   float64   `json:"memoryPercent"`
+	ProcessMemoryMB float64   `json:"processMemoryMB"`
+	Goroutines      int       `json:"goroutines"`
+	RequestTotal    uint64    `json:"requestTotal"`
+	ErrorTotal      uint64    `json:"errorTotal"`
+}
+
+type AdminRuntime struct {
+	AppName           string    `json:"appName"`
+	Version           string    `json:"version"`
+	RunMode           string    `json:"runMode"`
+	StartAt           time.Time `json:"startAt"`
+	UptimeSeconds     int64     `json:"uptimeSeconds"`
+	Goroutines        int       `json:"goroutines"`
+	RequestTotal      uint64    `json:"requestTotal"`
+	ErrorTotal        uint64    `json:"errorTotal"`
+	LastCPUPercent    float64   `json:"lastCpuPercent"`
+	LastMemoryPercent float64   `json:"lastMemoryPercent"`
+	ProcessMemoryMB   float64   `json:"processMemoryMB"`
+}
+
+type AdminErrorLog struct {
+	Time      string `json:"time"`
+	Level     string `json:"level"`
+	Message   string `json:"message"`
+	RequestID string `json:"requestId,omitempty"`
+	Path      string `json:"path,omitempty"`
+	Error     string `json:"error,omitempty"`
+	Raw       string `json:"raw"`
+}
+
+type AdminDashboard struct {
+	Overview      AdminOverview        `json:"overview"`
+	Runtime       AdminRuntime         `json:"runtime"`
+	Metrics       []AdminSystemPoint   `json:"metrics"`
+	RecentUsers   []AdminUserSummary   `json:"recentUsers"`
+	RecentCouples []AdminCoupleSummary `json:"recentCouples"`
+	ErrorLogs     []AdminErrorLog      `json:"errorLogs"`
+}

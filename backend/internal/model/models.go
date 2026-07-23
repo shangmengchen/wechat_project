@@ -17,6 +17,13 @@ type Goal = domain.Goal
 type MePayload = domain.MePayload
 type DashboardPayload = domain.DashboardPayload
 type UserLite = domain.UserLite
+type AdminOverview = domain.AdminOverview
+type AdminUserSummary = domain.AdminUserSummary
+type AdminCoupleSummary = domain.AdminCoupleSummary
+type AdminSystemPoint = domain.AdminSystemPoint
+type AdminRuntime = domain.AdminRuntime
+type AdminErrorLog = domain.AdminErrorLog
+type AdminDashboard = domain.AdminDashboard
 
 const (
 	TaskTodo   = domain.TaskTodo

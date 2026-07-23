@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"couple-mini/backend/configs"
+	"couple-mini/backend/internal/pkg/adminview"
 	"couple-mini/backend/internal/pkg/gormcli"
 	applog "couple-mini/backend/internal/pkg/logger"
 	"couple-mini/backend/internal/repo"
@@ -28,6 +29,14 @@ func Run() error {
 		"run_mode", cfg.AppConfig.RunMode,
 		"port", cfg.AppConfig.Port,
 	)
+	adminview.Start(
+		cfg.AppConfig.AppName,
+		cfg.AppConfig.Version,
+		cfg.AppConfig.RunMode,
+		time.Duration(cfg.AdminConfig.SampleIntervalSec)*time.Second,
+		cfg.AdminConfig.HistoryLimit,
+	)
+	defer adminview.Stop()
 
 	db, err := gormcli.GetDB()
 	if err != nil {

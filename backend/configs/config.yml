@@ -27,3 +27,11 @@ log:
   sql_level: "warn"
   sql_slow_ms: 500
   include_source: false
+
+admin:
+  enabled: true
+  username: "admin"
+  password: "admin123456"
+  title: "Couple Mini Admin"
+  sample_interval_sec: 5
+  history_limit: 120

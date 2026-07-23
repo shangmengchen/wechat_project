@@ -5,3 +5,5 @@ backend/bin/
 .cc-connect/config.toml
 backend/.env.docker
 backend/.env
+backend/admin-ui/node_modules/
+backend/admin-ui/.vite/

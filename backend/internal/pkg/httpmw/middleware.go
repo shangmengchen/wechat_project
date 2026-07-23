@@ -2,12 +2,15 @@ package httpmw
 
 import (
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/hex"
 	"fmt"
 	"net/http"
 	"runtime/debug"
 	"time"
 
+	"couple-mini/backend/configs"
+	"couple-mini/backend/internal/pkg/adminview"
 	applog "couple-mini/backend/internal/pkg/logger"
 
 	"github.com/gin-gonic/gin"
@@ -33,6 +36,7 @@ func AccessLog() gin.HandlerFunc {
 		c.Next()
 
 		latency := time.Since(start)
+		adminview.ObserveRequest(c.Writer.Status())
 		entry := applog.Access().With(
 			"request_id", GetRequestID(c),
 			"method", c.Request.Method,
@@ -56,6 +60,25 @@ func AccessLog() gin.HandlerFunc {
 		default:
 			entry.Info("http request completed")
 		}
+	}
+}
+
+func AdminBasicAuth() gin.HandlerFunc {
+	cfg := configs.GetGlobalConfig().AdminConfig
+	return func(c *gin.Context) {
+		if !cfg.Enabled {
+			c.Next()
+			return
+		}
+		user, pass, ok := c.Request.BasicAuth()
+		if ok &&
+			subtle.ConstantTimeCompare([]byte(user), []byte(cfg.Username)) == 1 &&
+			subtle.ConstantTimeCompare([]byte(pass), []byte(cfg.Password)) == 1 {
+			c.Next()
+			return
+		}
+		c.Header("WWW-Authenticate", `Basic realm="Couple Mini Admin"`)
+		c.AbortWithStatus(http.StatusUnauthorized)
 	}
 }
 

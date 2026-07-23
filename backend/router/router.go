@@ -68,6 +68,17 @@ func SetRouter(svc *service.Service) *gin.Engine {
 		v1.DELETE("/goals/:id", handler.DeleteGoal)
 	}
 
+	admin := r.Group("/admin")
+	admin.Use(httpmw.AdminBasicAuth())
+	{
+		admin.Static("/assets", "./web/admin/assets")
+		admin.GET("", handler.AdminPage)
+		admin.GET("/", handler.AdminPage)
+		admin.GET("/api/meta", handler.AdminMeta)
+		admin.GET("/api/dashboard", handler.AdminDashboard)
+		admin.GET("/api/errors", handler.AdminErrors)
+	}
+
 	return r
 }
 

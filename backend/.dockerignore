@@ -4,3 +4,5 @@ uploads
 .env
 .git
 *.exe
+admin-ui/node_modules
+admin-ui/.vite

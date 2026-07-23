@@ -11,9 +11,10 @@ import (
 )
 
 type GlobalConfig struct {
-	AppConfig AppConfig `yaml:"app"`
-	DbConfig  DbConfig  `yaml:"db"`
-	LogConfig LogConfig `yaml:"log"`
+	AppConfig   AppConfig   `yaml:"app"`
+	DbConfig    DbConfig    `yaml:"db"`
+	LogConfig   LogConfig   `yaml:"log"`
+	AdminConfig AdminConfig `yaml:"admin"`
 }
 
 type AppConfig struct {
@@ -47,6 +48,15 @@ type LogConfig struct {
 	SQLLevel      string `yaml:"sql_level"`
 	SQLSlowMS     int    `yaml:"sql_slow_ms"`
 	IncludeSource bool   `yaml:"include_source"`
+}
+
+type AdminConfig struct {
+	Enabled           bool   `yaml:"enabled"`
+	Username          string `yaml:"username"`
+	Password          string `yaml:"password"`
+	Title             string `yaml:"title"`
+	SampleIntervalSec int    `yaml:"sample_interval_sec"`
+	HistoryLimit      int    `yaml:"history_limit"`
 }
 
 var (
@@ -99,6 +109,14 @@ func defaultConfig() GlobalConfig {
 			SQLLevel:      "warn",
 			SQLSlowMS:     500,
 			IncludeSource: false,
+		},
+		AdminConfig: AdminConfig{
+			Enabled:           true,
+			Username:          "admin",
+			Password:          "admin123456",
+			Title:             "Couple Mini Admin",
+			SampleIntervalSec: 5,
+			HistoryLimit:      120,
 		},
 	}
 }
@@ -196,6 +214,29 @@ func overrideFromEnv(cfg *GlobalConfig) {
 	}
 	if value, ok := envBool("LOG_INCLUDE_SOURCE"); ok {
 		cfg.LogConfig.IncludeSource = value
+	}
+
+	if value, ok := envBool("ADMIN_ENABLED"); ok {
+		cfg.AdminConfig.Enabled = value
+	}
+	if value := os.Getenv("ADMIN_USERNAME"); value != "" {
+		cfg.AdminConfig.Username = value
+	}
+	if value := os.Getenv("ADMIN_PASSWORD"); value != "" || hasEnv("ADMIN_PASSWORD") {
+		cfg.AdminConfig.Password = value
+	}
+	if value := os.Getenv("ADMIN_TITLE"); value != "" {
+		cfg.AdminConfig.Title = value
+	}
+	if value := os.Getenv("ADMIN_SAMPLE_INTERVAL_SEC"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			cfg.AdminConfig.SampleIntervalSec = parsed
+		}
+	}
+	if value := os.Getenv("ADMIN_HISTORY_LIMIT"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			cfg.AdminConfig.HistoryLimit = parsed
+		}
 	}
 }
 

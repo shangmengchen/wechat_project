@@ -71,6 +71,43 @@ LOG_SQL_LEVEL=warn
 LOG_SQL_SLOW_MS=500
 ```
 
+## Admin Console
+
+The backend now includes an admin console:
+
+- Page: `GET /admin`
+- API: `GET /admin/api/dashboard`
+- Error logs: `GET /admin/api/errors`
+
+The admin page is now maintained as a Vue + Vite app:
+
+- Source: `backend/admin-ui`
+- Build output: `backend/web/admin`
+
+Build commands:
+
+```bash
+cd backend/admin-ui
+npm install
+npm run build
+```
+
+For local UI development:
+
+```bash
+cd backend/admin-ui
+npm run dev
+```
+
+Default credentials come from env:
+
+```bash
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=change_admin_password
+```
+
+Please change the admin password before deployment.
+
 ## Starter Deployment
 
 The starter cloud deployment files are included:
@@ -116,6 +153,8 @@ Behavior:
 - Backend auto-creates database and tables
 
 By default the backend is exposed at `http://127.0.0.1:8080`.
+
+The admin page will be available at `http://127.0.0.1:8080/admin`.
 
 ## Main Endpoints
 

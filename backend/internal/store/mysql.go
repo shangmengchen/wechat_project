@@ -606,6 +606,118 @@ func (s *MySQLStore) DeleteGoal(id string) error {
 	return requireAffected(result.RowsAffected)
 }
 
+func (s *MySQLStore) AdminOverview() (domain.AdminOverview, error) {
+	now := time.Now()
+
+	totalUsers, err := s.countModel(&userModel{}, "")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	pairedCouples, err := s.countModel(&coupleModel{}, "user_b_id <> ''")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	pendingCodes, err := s.countModel(&coupleModel{}, "pair_code <> '' AND code_expire_at > ?", now)
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	totalMoments, err := s.countModel(&momentModel{}, "")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	openTasks, err := s.countModel(&taskModel{}, "status <> ?", domain.TaskDone)
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	activeGoals, err := s.countModel(&goalModel{}, "status = ?", "active")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	totalOrders, err := s.countModel(&orderModel{}, "")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	enabledDishes, err := s.countModel(&dishModel{}, "enabled = ?", true)
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	scheduledTasks, err := s.countModel(&scheduledTaskModel{}, "")
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	newUsers24h, err := s.countModel(&userModel{}, "created_at >= ?", now.Add(-24*time.Hour))
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+	newCouples7d, err := s.countModel(&coupleModel{}, "created_at >= ? AND user_b_id <> ''", now.Add(-7*24*time.Hour))
+	if err != nil {
+		return domain.AdminOverview{}, err
+	}
+
+	return domain.AdminOverview{
+		TotalUsers:       totalUsers,
+		PairedCouples:    pairedCouples,
+		PendingPairCodes: pendingCodes,
+		TotalMoments:     totalMoments,
+		OpenTasks:        openTasks,
+		ActiveGoals:      activeGoals,
+		TotalOrders:      totalOrders,
+		EnabledDishes:    enabledDishes,
+		ScheduledTasks:   scheduledTasks,
+		NewUsers24h:      newUsers24h,
+		NewCouples7d:     newCouples7d,
+	}, nil
+}
+
+func (s *MySQLStore) AdminRecentUsers(limit int) ([]domain.AdminUserSummary, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+	var rows []userModel
+	if err := s.db.Order("created_at DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]domain.AdminUserSummary, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, domain.AdminUserSummary{
+			ID:        row.ID,
+			Nickname:  row.Nickname,
+			Avatar:    row.Avatar,
+			WxID:      row.WxID,
+			CreatedAt: row.CreatedAt,
+		})
+	}
+	return items, nil
+}
+
+func (s *MySQLStore) AdminRecentCouples(limit int) ([]domain.AdminCoupleSummary, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+	var rows []coupleModel
+	if err := s.db.Order("created_at DESC").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]domain.AdminCoupleSummary, 0, len(rows))
+	for _, row := range rows {
+		item := domain.AdminCoupleSummary{
+			ID:        row.ID,
+			UserAID:   row.UserAID,
+			UserBID:   row.UserBID,
+			LoveDate:  row.LoveDate,
+			CreatedAt: row.CreatedAt,
+		}
+		if row.PairCode != "" {
+			item.PairCode = row.PairCode
+		}
+		if row.CodeExpireAt != nil {
+			item.CodeExpireAt = *row.CodeExpireAt
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (s *MySQLStore) seed(ctx context.Context) error {
 	total, err := s.countModel(&userModel{}, "")
 	if err != nil || total > 0 {
