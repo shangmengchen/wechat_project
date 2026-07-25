@@ -1,6 +1,8 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 
+const SHARE_TTL_MS = 20 * 60 * 1000;
+
 Page({
   data: {
     mode: "input",
@@ -45,11 +47,12 @@ Page({
     if (hasActiveShareCode(this.data)) {
       this.setData({
         mode: "generate",
-        shareTime: expireText(this.data.shareExpireAt)
+        ...buildShareState(this.data.generatedCode, this.data.shareExpireAt)
       });
-      wx.showToast({ title: "当前分享码仍在20分钟有效期内", icon: "none" });
+      wx.showToast({ title: "当前分享码仍在 20 分钟有效期内", icon: "none" });
       return;
     }
+
     const app = getApp();
     api.generatePairCode(app.globalData.currentUserId).then((ret) => {
       if (!isOk(ret)) {
@@ -60,17 +63,18 @@ Page({
       this.setData({
         generatedCode: data.pairCode || "",
         shareExpireAt: data.codeExpireAt || "",
-        shareTime: expireText(data.codeExpireAt),
-        mode: "generate"
+        mode: "generate",
+        ...buildShareState(data.pairCode || "", data.codeExpireAt || "")
       });
     });
   },
 
   confirmPair() {
     if (this.data.code.length !== 6) {
-      wx.showToast({ title: "请输入6位分享码", icon: "none" });
+      wx.showToast({ title: "请输入 6 位分享码", icon: "none" });
       return;
     }
+
     const app = getApp();
     api.confirmPair({
       userId: app.globalData.currentUserId,
@@ -95,7 +99,7 @@ Page({
     this.stopShareTimer();
     this.shareTimer = setInterval(() => {
       this.refreshShareTime();
-    }, 30000);
+    }, 1000);
   },
 
   stopShareTimer() {
@@ -105,32 +109,8 @@ Page({
   },
 
   refreshShareTime() {
-    if (!this.data.shareExpireAt || !this.data.generatedCode) {
-      this.setData({
-        shareStatusText: "",
-        shareRuleText: "",
-        canRegenerate: true,
-        regenerateButtonText: "重新生成分享码"
-      });
-      return;
-    }
-    if (!hasActiveShareCode(this.data)) {
-      this.setData({
-        shareTime: "分享码已过期",
-        shareStatusText: "已过期",
-        shareRuleText: "可以重新生成新的分享码，对方需要使用最新的 6 位分享码完成配对。",
-        canRegenerate: true,
-        regenerateButtonText: "重新生成分享码"
-      });
-      return;
-    }
-    this.setData({
-      shareTime: expireText(this.data.shareExpireAt),
-      shareStatusText: "有效中",
-      shareRuleText: "分享码在 20 分钟内有效，有效期内不会重复生成，请直接把当前这组分享码发给对方。",
-      canRegenerate: false,
-      regenerateButtonText: "20 分钟内不可重复生成"
-    });
+    const nextState = buildShareState(this.data.generatedCode, this.data.shareExpireAt);
+    this.setData(nextState);
   }
 });
 
@@ -142,15 +122,55 @@ function pairErrorText(ret = {}) {
   return ret.message || "分享码输入错误";
 }
 
-function expireText(value) {
-  const expire = value ? new Date(value).getTime() : Date.now() + 20 * 60 * 1000;
-  const remain = Math.max(0, expire - Date.now());
-  if (remain <= 0) return "分享码已过期";
-  const minutes = Math.ceil(remain / 60000);
-  return `有效期剩余 ${minutes} 分钟`;
-}
-
 function hasActiveShareCode(data = {}) {
   if (!data.generatedCode || !data.shareExpireAt) return false;
-  return new Date(data.shareExpireAt).getTime() > Date.now();
+  return remainingMs(data.shareExpireAt) > 0;
+}
+
+function buildShareState(generatedCode, shareExpireAt) {
+  if (!generatedCode || !shareExpireAt) {
+    return {
+      shareTime: "",
+      shareStatusText: "",
+      shareRuleText: "",
+      canRegenerate: true,
+      regenerateButtonText: "重新生成分享码"
+    };
+  }
+
+  const remain = remainingMs(shareExpireAt);
+  if (remain <= 0) {
+    return {
+      shareTime: "分享码已过期",
+      shareStatusText: "已过期",
+      shareRuleText: "可以重新生成新的分享码，对方需要使用最新的 6 位分享码完成配对。",
+      canRegenerate: true,
+      regenerateButtonText: "重新生成分享码"
+    };
+  }
+
+  return {
+    shareTime: countdownText(remain),
+    shareStatusText: "有效中",
+    shareRuleText: "分享码在 20 分钟内有效，有效期内不会重复生成，请直接把当前这组分享码发给对方。",
+    canRegenerate: false,
+    regenerateButtonText: "20 分钟内不可重复生成"
+  };
+}
+
+function remainingMs(expireAt) {
+  const target = new Date(expireAt).getTime();
+  if (!target) return 0;
+  return Math.max(0, target - Date.now());
+}
+
+function countdownText(remain) {
+  const totalSeconds = Math.max(0, Math.floor(remain / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `有效期剩余 ${pad2(minutes)}:${pad2(seconds)}`;
+}
+
+function pad2(value) {
+  return String(value).padStart(2, "0");
 }

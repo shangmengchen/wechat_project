@@ -1,4 +1,18 @@
 #!/usr/bin/env bash
+if [ -z "${BASH_VERSION:-}" ]; then
+  if [ -x /usr/bin/bash ]; then
+    exec /usr/bin/bash "$0" "$@"
+  fi
+  if [ -x /bin/bash ]; then
+    exec /bin/bash "$0" "$@"
+  fi
+  if command -v bash >/dev/null 2>&1; then
+    exec "$(command -v bash)" "$0" "$@"
+  fi
+  echo "bash is required to run this script." >&2
+  exit 1
+fi
+
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -108,6 +122,14 @@ build_admin_ui() {
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    docker|local)
+      MODE="$1"
+      shift
+      ;;
+    build)
+      REBUILD=true
+      shift
+      ;;
     --mode)
       MODE="$2"
       shift 2
