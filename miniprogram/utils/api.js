@@ -1,8 +1,19 @@
 const mock = require("./mock");
 
+function shouldUseMockAPI(app) {
+  return !!(app.globalData && app.globalData.useMockAPI) || !!wx.getStorageSync("useMockAPI");
+}
+
+function ensureAppSession(app) {
+  if (!app || shouldUseMockAPI(app) || typeof app.ensureSession !== "function") {
+    return Promise.resolve();
+  }
+  return Promise.resolve(app.ensureSession()).catch(() => null);
+}
+
 function request(path, options = {}) {
   const app = getApp();
-  return new Promise((resolve) => {
+  return ensureAppSession(app).then(() => new Promise((resolve) => {
     wx.request({
       url: `${app.globalData.apiBase}${path}`,
       method: options.method || "GET",
@@ -11,7 +22,15 @@ function request(path, options = {}) {
         Authorization: app.globalData.token ? `Bearer ${app.globalData.token}` : ""
       },
       success: (res) => resolve(res.data),
-      fail: () => {
+      fail: (error) => {
+        if (!shouldUseMockAPI(app)) {
+          resolve({
+            code: 500,
+            data: null,
+            message: (error && error.errMsg) || "network request failed"
+          });
+          return;
+        }
         const data = fallback(path, options.data || {});
         if (data && typeof data.code === "number") {
           resolve(data);
@@ -20,13 +39,13 @@ function request(path, options = {}) {
         resolve({ code: 0, data, message: "mock fallback" });
       }
     });
-  });
+  }));
 }
 
 function uploadImage(filePath) {
   const app = getApp();
   const base = app.globalData.apiBase.replace(/\/api\/v1\/?$/, "");
-  return new Promise((resolve) => {
+  return ensureAppSession(app).then(() => new Promise((resolve) => {
     wx.uploadFile({
       url: `${base}/api/v1/uploads/images`,
       filePath,
@@ -38,16 +57,37 @@ function uploadImage(filePath) {
         try {
           resolve(JSON.parse(res.data));
         } catch (err) {
-          resolve({ code: 500, message: "图片上传失败" });
+          resolve({ code: 500, message: "image upload failed" });
         }
       },
-      fail: () => resolve({ code: 0, data: { url: filePath }, message: "mock upload fallback" })
+      fail: (error) => {
+        if (!shouldUseMockAPI(app)) {
+          resolve({
+            code: 500,
+            data: null,
+            message: (error && error.errMsg) || "image upload failed"
+          });
+          return;
+        }
+        resolve({ code: 0, data: { url: filePath }, message: "mock upload fallback" });
+      }
     });
-  });
+  }));
 }
 
 function fallback(path, data = {}) {
   path = path.split("?")[0];
+  if (path === "/sync/state") {
+    return {
+      code: 0,
+      data: {
+        paired: !!wx.getStorageSync("isPaired"),
+        coupleId: wx.getStorageSync("isPaired") ? "mock-couple" : "",
+        version: Date.now(),
+        updatedAt: new Date().toISOString()
+      }
+    };
+  }
   if (path.includes("/pair/code")) return mock.generatePairCode(data.userId);
   if (path.includes("/pair/confirm")) return mock.confirmPair(data);
   if (path.includes("/couple/love-date")) return mock.updateLoveDate(data.loveDate);
@@ -75,22 +115,22 @@ function fallback(path, data = {}) {
   if (path.includes("/goals/")) return mock.deleteGoal(path.split("/")[2]);
   if (path === "/goals") return data.title ? mock.createGoal(data) : mock.goals;
   if (path.includes("dashboard")) return { users: mock.users, dashboard: mock.dashboard };
-  if (path.includes("me")) return { users: mock.users, dashboard: mock.dashboard };
   return {};
 }
 
 module.exports = {
   request,
   uploadImage,
+  login: (data) => request("/auth/login", { method: "POST", data }),
+  getSyncState: () => request("/sync/state"),
   generatePairCode: (userId) => request("/pair/code", { method: "POST", data: { userId } }),
   confirmPair: (data) => request("/pair/confirm", { method: "POST", data }),
   getDashboard: () => {
     const app = getApp();
-    if (app.globalData.demoMode || wx.getStorageSync("demoMode")) {
+    if (shouldUseMockAPI(app) && (app.globalData.demoMode || wx.getStorageSync("demoMode"))) {
       return Promise.resolve({ code: 0, data: { users: mock.users, dashboard: mock.dashboard } });
     }
-    const userId = app.globalData.currentUserId;
-    return request(userId ? `/dashboard?userId=${encodeURIComponent(userId)}` : "/dashboard");
+    return request("/dashboard");
   },
   updateLoveDate: (loveDate) => request("/couple/love-date", { method: "PATCH", data: { loveDate } }),
   updateUserProfile: (id, data) => request(`/users/${id}/profile`, { method: "PATCH", data }),

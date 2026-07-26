@@ -36,6 +36,10 @@ ADMIN_USERNAME="${ADMIN_USERNAME:-}"
 ADMIN_PASSWORD_VALUE=""
 ADMIN_PASSWORD_SET=false
 ADMIN_TITLE="${ADMIN_TITLE:-}"
+AUTH_TOKEN_SECRET="${AUTH_TOKEN_SECRET:-}"
+AUTH_TOKEN_TTL_HOURS="${AUTH_TOKEN_TTL_HOURS:-}"
+WECHAT_APP_ID="${WECHAT_APP_ID:-}"
+WECHAT_SECRET="${WECHAT_SECRET:-}"
 SKIP_ADMIN_BUILD=false
 
 if [[ "${ADMIN_PASSWORD+x}" == "x" ]]; then
@@ -65,6 +69,10 @@ Options:
   --admin-username VALUE
   --admin-password VALUE
   --admin-title VALUE
+  --auth-token-secret VALUE
+  --auth-token-ttl-hours VALUE
+  --wechat-app-id VALUE
+  --wechat-secret VALUE
   --skip-admin-build
   --help
 EOF
@@ -199,6 +207,22 @@ while [[ $# -gt 0 ]]; do
       ADMIN_TITLE="$2"
       shift 2
       ;;
+    --auth-token-secret)
+      AUTH_TOKEN_SECRET="$2"
+      shift 2
+      ;;
+    --auth-token-ttl-hours)
+      AUTH_TOKEN_TTL_HOURS="$2"
+      shift 2
+      ;;
+    --wechat-app-id)
+      WECHAT_APP_ID="$2"
+      shift 2
+      ;;
+    --wechat-secret)
+      WECHAT_SECRET="$2"
+      shift 2
+      ;;
     --skip-admin-build)
       SKIP_ADMIN_BUILD=true
       shift
@@ -249,6 +273,18 @@ case "$MODE" in
     fi
     if [[ -n "$ADMIN_TITLE" ]]; then
       export ADMIN_TITLE
+    fi
+    if [[ -n "$AUTH_TOKEN_SECRET" ]]; then
+      export AUTH_TOKEN_SECRET
+    fi
+    if [[ -n "$AUTH_TOKEN_TTL_HOURS" ]]; then
+      export AUTH_TOKEN_TTL_HOURS
+    fi
+    if [[ -n "$WECHAT_APP_ID" ]]; then
+      export WECHAT_APP_ID
+    fi
+    if [[ -n "$WECHAT_SECRET" ]]; then
+      export WECHAT_SECRET
     fi
 
     if [[ -z "$MYSQL_PASSWORD" ]]; then
@@ -309,6 +345,10 @@ case "$MODE" in
     [[ -n "$ADMIN_USERNAME" ]] && set_env_value "$local_env_file" "ADMIN_USERNAME" "$ADMIN_USERNAME"
     [[ "$ADMIN_PASSWORD_SET" == "true" ]] && set_env_value "$local_env_file" "ADMIN_PASSWORD" "$ADMIN_PASSWORD_VALUE"
     [[ -n "$ADMIN_TITLE" ]] && set_env_value "$local_env_file" "ADMIN_TITLE" "$ADMIN_TITLE"
+    [[ -n "$AUTH_TOKEN_SECRET" ]] && set_env_value "$local_env_file" "AUTH_TOKEN_SECRET" "$AUTH_TOKEN_SECRET"
+    [[ -n "$AUTH_TOKEN_TTL_HOURS" ]] && set_env_value "$local_env_file" "AUTH_TOKEN_TTL_HOURS" "$AUTH_TOKEN_TTL_HOURS"
+    [[ -n "$WECHAT_APP_ID" ]] && set_env_value "$local_env_file" "WECHAT_APP_ID" "$WECHAT_APP_ID"
+    [[ -n "$WECHAT_SECRET" ]] && set_env_value "$local_env_file" "WECHAT_SECRET" "$WECHAT_SECRET"
 
     mkdir -p logs/admin logs/backend/caddy uploads
 

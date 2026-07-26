@@ -42,6 +42,10 @@ func fail(c *gin.Context, err error) {
 		status = http.StatusBadRequest
 		message = "already paired"
 	}
+	if errors.Is(err, repo.ErrUnauthorized) {
+		status = http.StatusUnauthorized
+		message = "unauthorized"
+	}
 	logRequestError(c, err, status, message)
 	c.JSON(status, gin.H{"code": status, "message": message})
 }

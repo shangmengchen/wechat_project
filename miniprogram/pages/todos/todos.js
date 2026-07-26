@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -7,14 +8,15 @@ Page({
   data: {
     active: "todo",
     tabs: [
-      { key: "todo", text: "待完成", count: 3 },
-      { key: "review", text: "待审核", count: 1 },
-      { key: "done", text: "已完成", count: 1 }
+      { key: "todo", text: "Todo", count: 0 },
+      { key: "review", text: "Review", count: 0 },
+      { key: "done", text: "Done", count: 0 }
     ],
+    users: normalizeUsers(api.mock.users),
     tasks: api.mock.todos,
     showTaskForm: false,
-    typeOptions: ["一次性", "每月", "每年"],
-    ownerOptions: ["双方", api.mock.users.me.name, api.mock.users.partner.name, "自定义"],
+    typeOptions: ["one-time", "monthly", "yearly"],
+    ownerOptions: ["both", api.mock.users.me.name, api.mock.users.partner.name, "custom"],
     typeIndex: 0,
     ownerIndex: 0,
     taskForm: {
@@ -27,18 +29,27 @@ Page({
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
   onShow() {
     if (!session.guardCouplePage()) return;
+    this.load();
+  },
+
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
   },
 
   load() {
     api.getDashboard().then((res) => {
       const data = res.data || res;
-      const users = data.users || api.mock.users;
-      this.setData({ ownerOptions: ["双方", users.me.name, users.partner.name, "自定义"] });
+      const users = normalizeUsers(data.users || api.mock.users);
+      this.setData({
+        users,
+        ownerOptions: ["both", users.me.name, users.partner.name, "custom"]
+      });
     });
     return api.getTasks().then((res) => this.setData({ tasks: res.data || res || api.mock.todos }, this.refreshCounts));
   },
@@ -103,18 +114,18 @@ Page({
     const form = this.data.taskForm;
     const title = (form.title || "").trim();
     if (!title) {
-      wx.showToast({ title: "请输入任务内容", icon: "none" });
+      wx.showToast({ title: "Task title required", icon: "none" });
       return;
     }
     const ownerOption = this.data.ownerOptions[this.data.ownerIndex];
-    const owner = ownerOption === "自定义" ? (form.ownerCustom || "").trim() : ownerOption;
+    const owner = ownerOption === "custom" ? (form.ownerCustom || "").trim() : ownerOption;
     if (!owner) {
-      wx.showToast({ title: "请输入负责人", icon: "none" });
+      wx.showToast({ title: "Owner required", icon: "none" });
       return;
     }
     const task = {
       title,
-      tag: (form.tag || "生活").trim(),
+      tag: (form.tag || "life").trim(),
       owner,
       type: this.data.typeOptions[this.data.typeIndex],
       due: form.due,
@@ -122,7 +133,7 @@ Page({
     };
     api.createTask(task).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "创建失败", icon: "none" });
+        wx.showToast({ title: ret.message || "Create failed", icon: "none" });
         return;
       }
       const data = ret.data || { ...task, id: `local-${Date.now()}`, status: "todo" };
@@ -133,8 +144,8 @@ Page({
   deleteTask(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "删除任务",
-      content: "确定删除这条任务吗？",
+      title: "Delete task",
+      content: "Delete this task?",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteTask(id).then(() => {
@@ -160,3 +171,17 @@ Page({
     });
   }
 });
+
+function normalizeUsers(users) {
+  const next = users || api.mock.users;
+  return {
+    me: normalizeUser(next.me || api.mock.users.me),
+    partner: normalizeUser(next.partner || api.mock.users.partner)
+  };
+}
+
+function normalizeUser(user) {
+  const next = { ...user };
+  next.avatarText = String(next.name || "?").slice(0, 1);
+  return next;
+}

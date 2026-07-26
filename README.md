@@ -15,3 +15,13 @@ cd backend
 # Windows PowerShell
 .\start.ps1
 ```
+
+To upload the mini program with CI tooling:
+
+```bash
+cd miniprogram
+npm install
+cp upload.config.example.json upload.config.json
+# fill in privateKeyPath, then run
+npm run upload
+```

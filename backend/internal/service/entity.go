@@ -3,9 +3,11 @@ package service
 import "couple-mini/backend/internal/model"
 
 type LoginRequest struct {
+	UserID   string `json:"userId"`
 	Code     string `json:"code"`
 	OpenID   string `json:"openid"`
 	Nickname string `json:"nickname"`
+	Avatar   string `json:"avatar"`
 }
 
 type GeneratePairCodeRequest struct {

@@ -32,6 +32,21 @@
   font-size: 46rpx;
 }
 
+.avatar-image {
+  border-radius: 50%;
+  background: #ffffff;
+}
+
+.avatar-image.big {
+  width: 112rpx;
+  height: 112rpx;
+}
+
+.avatar-image.small {
+  width: 72rpx;
+  height: 72rpx;
+}
+
 .edit-dot {
   position: absolute;
   left: 84rpx;
@@ -119,6 +134,53 @@
 
 .setting-card {
   overflow: hidden;
+}
+
+.form-block {
+  padding: 22rpx 34rpx;
+  border-top: 1rpx solid #f0e3e7;
+}
+
+.form-label {
+  color: #7287a7;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.form-input {
+  margin-top: 14rpx;
+  height: 72rpx;
+  padding: 0 24rpx;
+  border-radius: 22rpx;
+  background: #fff7fa;
+  color: #152742;
+  font-size: 26rpx;
+  font-weight: 700;
+}
+
+.profile-actions {
+  display: grid;
+  gap: 18rpx;
+  padding: 24rpx 34rpx 28rpx;
+  border-top: 1rpx solid #f0e3e7;
+}
+
+.save-btn,
+.sync-btn {
+  height: 84rpx;
+  border-radius: 42rpx;
+  font-size: 26rpx;
+  font-weight: 900;
+}
+
+.save-btn {
+  color: #ffffff;
+  background: linear-gradient(135deg, #ff6286 0%, #ff8a5b 100%);
+}
+
+.sync-btn {
+  color: #12763a;
+  background: #e7f8ed;
 }
 
 .setting-row {

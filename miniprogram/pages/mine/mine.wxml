@@ -2,57 +2,64 @@
   <view class="profile-hero">
     <view class="status-row hero-status">
       <text>9:41</text>
-      <text>••• WiFi ▫</text>
+      <text>WiFi</text>
     </view>
-    <view class="page-title mine-title">我的 <text>👤</text></view>
+    <view class="page-title mine-title">Profile</view>
     <view class="profile-row">
-      <view class="avatar big">{{users.me.avatarText}}</view>
-      <view class="edit-dot">✎</view>
+      <image wx:if="{{users.me.avatar}}" class="avatar-image big" src="{{users.me.avatar}}" mode="aspectFill"></image>
+      <view wx:else class="avatar big">{{users.me.avatarText}}</view>
+      <view class="edit-dot">E</view>
       <view class="profile-text">
         <view class="name">{{users.me.name}}</view>
-        <view class="line">🎂 {{users.me.birthday}}</view>
-        <view class="line">ID: {{users.me.wxid}}</view>
+        <view class="line">Birthday: {{users.me.birthday}}</view>
+        <view class="line">WeChat ID: {{users.me.wxid}}</view>
       </view>
     </view>
   </view>
 
   <view class="mine-content">
     <view class="relation-card card">
-      <view class="relation-title">💑 我们的关系</view>
+      <view class="relation-title">Relationship</view>
       <view class="relation-row">
         <view class="mini-person">
-          <view class="avatar small">{{users.me.avatarText}}</view>
+          <image wx:if="{{users.me.avatar}}" class="avatar-image small" src="{{users.me.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="avatar small">{{users.me.avatarText}}</view>
           <text>{{users.me.name}}</text>
         </view>
         <view class="relation-days">
           <view>{{dashboard.loveDays}}</view>
-          <text>天</text>
+          <text>days</text>
           <view class="date">{{dashboard.since}}</view>
         </view>
         <view class="mini-person">
-          <view class="avatar small dark">{{users.partner.avatarText}}</view>
+          <image wx:if="{{users.partner.avatar}}" class="avatar-image small" src="{{users.partner.avatar}}" mode="aspectFill"></image>
+          <view wx:else class="avatar small dark">{{users.partner.avatarText}}</view>
           <text>{{users.partner.name}}</text>
         </view>
       </view>
     </view>
 
-    <view class="section-title">设置</view>
+    <view class="section-title">Settings</view>
     <view class="setting-card card">
       <picker mode="date" value="{{dashboard.since}}" bindchange="changeLoveDate">
-        <view class="setting-row"><text>💕 修改恋爱日期</text><text>{{dashboard.since}} ›</text></view>
+        <view class="setting-row"><text>Love date</text><text>{{dashboard.since}} ></text></view>
       </picker>
       <picker mode="date" value="{{birthdayValue}}" bindchange="changeBirthday">
-        <view class="setting-row"><text>👤 编辑个人资料</text><text>{{users.me.birthday}} ›</text></view>
+        <view class="setting-row"><text>Birthday</text><text>{{users.me.birthday}} ></text></view>
       </picker>
-      <view class="setting-row"><text>🔔 通知设置</text><text>已开启 ›</text></view>
+      <view class="form-block">
+        <view class="form-label">Nickname</view>
+        <input class="form-input" value="{{profileForm.nickname}}" placeholder="Input nickname" bindinput="changeNickname" />
+      </view>
+      <view class="form-block">
+        <view class="form-label">WeChat ID</view>
+        <input class="form-input" value="{{profileForm.wxid}}" placeholder="Input WeChat ID" bindinput="changeWxid" />
+      </view>
+      <view class="profile-actions">
+        <button bindtap="saveProfile" class="save-btn">Save Profile</button>
+        <button bindtap="syncWechatProfile" class="sync-btn">Sync WeChat Profile</button>
+      </view>
+      <view class="setting-row"><text>Notifications</text><text>On</text></view>
     </view>
-
-    <view class="section-title">其他</view>
-    <view class="setting-card card">
-      <view class="setting-row"><text>ℹ️ 关于只有我们</text><text>v1.0.0 ›</text></view>
-      <view class="setting-row"><text>🔒 隐私政策</text><text>›</text></view>
-    </view>
-
-    <button bindtap="toggleExpanded" class="unbind {{expanded ? 'show' : ''}}">💔 解绑情侣关系</button>
   </view>
 </view>

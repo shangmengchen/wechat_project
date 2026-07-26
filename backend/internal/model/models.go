@@ -17,6 +17,7 @@ type Goal = domain.Goal
 type MePayload = domain.MePayload
 type DashboardPayload = domain.DashboardPayload
 type UserLite = domain.UserLite
+type SyncState = domain.SyncState
 type AdminOverview = domain.AdminOverview
 type AdminUserSummary = domain.AdminUserSummary
 type AdminCoupleSummary = domain.AdminCoupleSummary

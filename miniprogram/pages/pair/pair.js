@@ -1,8 +1,6 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 
-const SHARE_TTL_MS = 20 * 60 * 1000;
-
 Page({
   data: {
     mode: "input",
@@ -13,21 +11,28 @@ Page({
     shareStatusText: "",
     shareRuleText: "",
     canRegenerate: true,
-    regenerateButtonText: "重新生成分享码",
+    regenerateButtonText: "Regenerate code",
     keys: ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"]
   },
 
   onShow() {
+    if (session.isPaired()) {
+      wx.switchTab({ url: "/pages/home/home" });
+      return;
+    }
     this.startShareTimer();
     this.refreshShareTime();
+    this.syncPairStatus();
   },
 
   onHide() {
     this.stopShareTimer();
+    this.stopPairStatusPolling();
   },
 
   onUnload() {
     this.stopShareTimer();
+    this.stopPairStatusPolling();
   },
 
   switchMode(e) {
@@ -49,14 +54,14 @@ Page({
         mode: "generate",
         ...buildShareState(this.data.generatedCode, this.data.shareExpireAt)
       });
-      wx.showToast({ title: "当前分享码仍在 20 分钟有效期内", icon: "none" });
+      wx.showToast({ title: "Current code is still valid", icon: "none" });
       return;
     }
 
     const app = getApp();
     api.generatePairCode(app.globalData.currentUserId).then((ret) => {
       if (!isOk(ret)) {
-        wx.showToast({ title: ret.message || "生成分享码失败", icon: "none" });
+        wx.showToast({ title: ret.message || "Generate failed", icon: "none" });
         return;
       }
       const data = ret.data || ret;
@@ -66,18 +71,17 @@ Page({
         mode: "generate",
         ...buildShareState(data.pairCode || "", data.codeExpireAt || "")
       });
+      this.startPairStatusPolling();
     });
   },
 
   confirmPair() {
     if (this.data.code.length !== 6) {
-      wx.showToast({ title: "请输入 6 位分享码", icon: "none" });
+      wx.showToast({ title: "Enter the 6-digit code", icon: "none" });
       return;
     }
 
-    const app = getApp();
     api.confirmPair({
-      userId: app.globalData.currentUserId,
       code: this.data.code,
       loveDate: new Date().toISOString().slice(0, 10)
     }).then((ret) => {
@@ -111,6 +115,38 @@ Page({
   refreshShareTime() {
     const nextState = buildShareState(this.data.generatedCode, this.data.shareExpireAt);
     this.setData(nextState);
+    if (hasActiveShareCode(this.data)) {
+      this.startPairStatusPolling();
+      return;
+    }
+    this.stopPairStatusPolling();
+  },
+
+  startPairStatusPolling() {
+    if (this.pairStatusTimer || !hasActiveShareCode(this.data) || session.isPaired()) return;
+    this.pairStatusTimer = setInterval(() => {
+      this.syncPairStatus();
+    }, 3000);
+  },
+
+  stopPairStatusPolling() {
+    if (!this.pairStatusTimer) return;
+    clearInterval(this.pairStatusTimer);
+    this.pairStatusTimer = null;
+  },
+
+  syncPairStatus() {
+    if (!hasActiveShareCode(this.data) || session.isPaired()) return;
+    api.getSyncState().then((ret) => {
+      const data = ret.data || ret || {};
+      if (!data.paired) return;
+      session.markPaired();
+      this.stopPairStatusPolling();
+      wx.showToast({ title: "Paired", icon: "success" });
+      setTimeout(() => {
+        wx.switchTab({ url: "/pages/home/home" });
+      }, 300);
+    });
   }
 });
 
@@ -119,7 +155,7 @@ function isOk(ret) {
 }
 
 function pairErrorText(ret = {}) {
-  return ret.message || "分享码输入错误";
+  return ret.message || "Invalid pair code";
 }
 
 function hasActiveShareCode(data = {}) {
@@ -134,27 +170,27 @@ function buildShareState(generatedCode, shareExpireAt) {
       shareStatusText: "",
       shareRuleText: "",
       canRegenerate: true,
-      regenerateButtonText: "重新生成分享码"
+      regenerateButtonText: "Regenerate code"
     };
   }
 
   const remain = remainingMs(shareExpireAt);
   if (remain <= 0) {
     return {
-      shareTime: "分享码已过期",
-      shareStatusText: "已过期",
-      shareRuleText: "可以重新生成新的分享码，对方需要使用最新的 6 位分享码完成配对。",
+      shareTime: "Code expired",
+      shareStatusText: "Expired",
+      shareRuleText: "Generate a new code and send the latest 6-digit code to your partner.",
       canRegenerate: true,
-      regenerateButtonText: "重新生成分享码"
+      regenerateButtonText: "Generate new code"
     };
   }
 
   return {
     shareTime: countdownText(remain),
-    shareStatusText: "有效中",
-    shareRuleText: "分享码在 20 分钟内有效，有效期内不会重复生成，请直接把当前这组分享码发给对方。",
+    shareStatusText: "Active",
+    shareRuleText: "The code stays valid for 20 minutes. During that time, send the current code directly to your partner.",
     canRegenerate: false,
-    regenerateButtonText: "20 分钟内不可重复生成"
+    regenerateButtonText: "Valid for 20 minutes"
   };
 }
 
@@ -168,7 +204,7 @@ function countdownText(remain) {
   const totalSeconds = Math.max(0, Math.floor(remain / 1000));
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
-  return `有效期剩余 ${pad2(minutes)}:${pad2(seconds)}`;
+  return `Expires in ${pad2(minutes)}:${pad2(seconds)}`;
 }
 
 function pad2(value) {

@@ -1,14 +1,16 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
 
 Page({
   data: {
     active: "feed",
     tabs: [
-      { key: "feed", text: "动态" },
-      { key: "timeline", text: "时光轴" },
-      { key: "dates", text: "纪念日" }
+      { key: "feed", text: "Feed" },
+      { key: "timeline", text: "Timeline" },
+      { key: "dates", text: "Dates" }
     ],
+    users: normalizeUsers(api.mock.users),
     moments: api.mock.moments,
     anniversaries: api.mock.dashboard.anniversaries,
     monthTitle: "",
@@ -21,12 +23,17 @@ Page({
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
   onShow() {
     if (!session.guardCouplePage()) return;
     this.load();
+  },
+
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
   },
 
   load() {
@@ -39,7 +46,10 @@ Page({
     api.getDashboard().then((res) => {
       const data = res.data || res;
       const dashboard = data.dashboard || api.mock.dashboard;
-      this.setData({ anniversaries: dashboard.anniversaries || api.mock.dashboard.anniversaries });
+      this.setData({
+        users: normalizeUsers(data.users || api.mock.users),
+        anniversaries: dashboard.anniversaries || api.mock.dashboard.anniversaries
+      });
     });
   },
 
@@ -64,7 +74,7 @@ Page({
           this.setData({ "momentDraft.image": data.url || filePath });
           return;
         }
-        wx.showToast({ title: ret.message || "图片上传失败", icon: "none" });
+        wx.showToast({ title: ret.message || "Upload failed", icon: "none" });
       });
     });
   },
@@ -76,22 +86,22 @@ Page({
   submitMoment() {
     const content = (this.data.momentDraft.content || "").trim();
     if (!content) {
-      wx.showToast({ title: "请输入动态内容", icon: "none" });
+      wx.showToast({ title: "Content required", icon: "none" });
       return;
     }
     const moment = {
-      author: api.mock.users.me.name,
-      avatar: api.mock.users.me.avatarText,
-      tag: "日常记录",
+      author: this.data.users.me.name,
+      avatar: this.data.users.me.avatarText,
+      tag: "Daily",
       content,
       image: this.data.momentDraft.image
     };
     api.createMoment(moment).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "发布失败", icon: "none" });
+        wx.showToast({ title: ret.message || "Publish failed", icon: "none" });
         return;
       }
-      const data = ret.data || ret || { ...moment, id: `local-${Date.now()}`, time: "刚刚", liked: false };
+      const data = ret.data || ret || { ...moment, id: `local-${Date.now()}`, time: "just now", liked: false };
       this.setData({
         moments: [data].concat(this.data.moments),
         showComposer: false,
@@ -103,8 +113,8 @@ Page({
   deleteMoment(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "删除动态",
-      content: "确定删除这条动态吗？",
+      title: "Delete post",
+      content: "Delete this memory?",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteMoment(id).then(() => {
@@ -151,5 +161,19 @@ function chooseImage() {
 
 function currentMonthTitle() {
   const now = new Date();
-  return `${now.getFullYear()}年${now.getMonth() + 1}月`;
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function normalizeUsers(users) {
+  const next = users || api.mock.users;
+  return {
+    me: normalizeUser(next.me || api.mock.users.me),
+    partner: normalizeUser(next.partner || api.mock.users.partner)
+  };
+}
+
+function normalizeUser(user) {
+  const next = { ...user };
+  next.avatarText = String(next.name || "?").slice(0, 1);
+  return next;
 }

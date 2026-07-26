@@ -36,3 +36,11 @@ admin:
   title: "Couple Mini Admin"
   sample_interval_sec: 5
   history_limit: 120
+
+auth:
+  token_secret: "change-me-token-secret"
+  token_ttl_hours: 168
+
+wechat:
+  app_id: ""
+  secret: ""

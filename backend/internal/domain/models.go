@@ -135,9 +135,17 @@ type DashboardPayload struct {
 	Dashboard Dashboard           `json:"dashboard"`
 }
 
+type SyncState struct {
+	Paired    bool      `json:"paired"`
+	CoupleID  string    `json:"coupleId,omitempty"`
+	Version   int64     `json:"version"`
+	UpdatedAt time.Time `json:"updatedAt,omitempty"`
+}
+
 type UserLite struct {
 	ID         string `json:"id"`
 	Name       string `json:"name"`
+	Avatar     string `json:"avatar,omitempty"`
 	AvatarText string `json:"avatarText"`
 	Birthday   string `json:"birthday"`
 	WxID       string `json:"wxid"`

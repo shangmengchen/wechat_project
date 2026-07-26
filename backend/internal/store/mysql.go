@@ -20,6 +20,7 @@ var (
 	ErrInvalidPairCode = errors.New("invalid pair code")
 	ErrPairCodeExpired = errors.New("pair code expired")
 	ErrAlreadyPaired   = errors.New("already paired")
+	ErrUnauthorized    = errors.New("unauthorized")
 )
 
 const pairCodeTTL = 20 * time.Minute
@@ -55,19 +56,59 @@ func (s *MySQLStore) EnsureSchema(ctx context.Context, autoMigrate, autoSeed boo
 	return s.seed(ctx)
 }
 
-func (s *MySQLStore) Login(openid, nickname string) (domain.User, error) {
+func (s *MySQLStore) Login(userID, openid, nickname, avatar string) (domain.User, error) {
 	var user userModel
+	if strings.TrimSpace(userID) != "" {
+		err := s.db.Where("id = ?", userID).Take(&user).Error
+		if err == nil {
+			updates := map[string]any{}
+			if strings.TrimSpace(openid) != "" && openid != user.OpenID {
+				updates["openid"] = openid
+			}
+			if strings.TrimSpace(nickname) != "" && nickname != user.Nickname {
+				updates["nickname"] = nickname
+			}
+			if strings.TrimSpace(avatar) != "" && avatar != user.Avatar {
+				updates["avatar"] = avatar
+			}
+			if len(updates) == 0 {
+				return toUser(user), nil
+			}
+			if err := s.db.Model(&userModel{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+				return domain.User{}, err
+			}
+			return s.user(user.ID)
+		}
+		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+			return domain.User{}, err
+		}
+	}
+
 	err := s.db.Where("openid = ?", openid).Take(&user).Error
 	if err == nil {
-		return toUser(user), nil
+		updates := map[string]any{}
+		if strings.TrimSpace(nickname) != "" && nickname != user.Nickname {
+			updates["nickname"] = nickname
+		}
+		if strings.TrimSpace(avatar) != "" && avatar != user.Avatar {
+			updates["avatar"] = avatar
+		}
+		if len(updates) == 0 {
+			return toUser(user), nil
+		}
+		if err := s.db.Model(&userModel{}).Where("id = ?", user.ID).Updates(updates).Error; err != nil {
+			return domain.User{}, err
+		}
+		return s.user(user.ID)
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
 		return domain.User{}, err
 	}
 	user = userModel{
-		ID:        newID("u"),
+		ID:        firstNonEmpty(strings.TrimSpace(userID), newID("u")),
 		OpenID:    openid,
 		Nickname:  nickname,
+		Avatar:    avatar,
 		CreatedAt: time.Now(),
 	}
 	if err := s.db.Create(&user).Error; err != nil {
@@ -94,6 +135,8 @@ func (s *MySQLStore) GeneratePairCode(userID string) (domain.Couple, error) {
 		updates := map[string]any{
 			"pair_code":      code,
 			"code_expire_at": expireAt,
+			"version":        time.Now().UnixNano(),
+			"updated_at":     time.Now(),
 		}
 		if err := s.db.Model(&coupleModel{}).Where("id = ?", pending.ID).Updates(updates).Error; err != nil {
 			return domain.Couple{}, err
@@ -126,6 +169,8 @@ func (s *MySQLStore) GeneratePairCode(userID string) (domain.Couple, error) {
 		PairCode:     code,
 		CodeExpireAt: &expireAt,
 		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
+		Version:      time.Now().UnixNano(),
 	}
 	if err := s.db.Create(&couple).Error; err != nil {
 		return domain.Couple{}, err
@@ -176,6 +221,8 @@ func (s *MySQLStore) PairByCode(userID, code, loveDate string) (domain.Couple, e
 		"love_date":      loveDate,
 		"pair_code":      "",
 		"code_expire_at": nil,
+		"version":        time.Now().UnixNano(),
+		"updated_at":     time.Now(),
 	}
 	result := s.db.Model(&coupleModel{}).Where("id = ? AND user_b_id = '' AND pair_code = ?", couple.ID, code).Updates(updates)
 	if result.Error != nil {
@@ -1100,10 +1147,20 @@ func lite(user domain.User, avatarText string) domain.UserLite {
 	return domain.UserLite{
 		ID:         user.ID,
 		Name:       user.Nickname,
+		Avatar:     user.Avatar,
 		AvatarText: avatarText,
 		Birthday:   user.Birthday,
 		WxID:       user.WxID,
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func defaultCouple(coupleID string) string {
@@ -1272,6 +1329,8 @@ type coupleModel struct {
 	PairCode     string     `gorm:"column:pair_code;size:16;not null;default:''"`
 	CodeExpireAt *time.Time `gorm:"column:code_expire_at"`
 	CreatedAt    time.Time  `gorm:"column:created_at;not null"`
+	UpdatedAt    time.Time  `gorm:"column:updated_at;not null"`
+	Version      int64      `gorm:"column:version;not null;default:0"`
 }
 
 func (coupleModel) TableName() string { return "couples" }

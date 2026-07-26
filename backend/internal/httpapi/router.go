@@ -17,7 +17,7 @@ import (
 )
 
 type Store interface {
-	Login(openid, nickname string) (domain.User, error)
+	Login(userID, openid, nickname, avatar string) (domain.User, error)
 	GeneratePairCode(userID string) (domain.Couple, error)
 	PairByCode(userID, code, loveDate string) (domain.Couple, error)
 	UpdateLoveDate(loveDate string) (domain.Couple, error)
@@ -111,9 +111,11 @@ func (api API) health(c *gin.Context) {
 
 func (api API) login(c *gin.Context) {
 	var req struct {
+		UserID   string `json:"userId"`
 		Code     string `json:"code"`
 		OpenID   string `json:"openid"`
 		Nickname string `json:"nickname"`
+		Avatar   string `json:"avatar"`
 	}
 	if !bindJSON(c, &req) {
 		return
@@ -124,7 +126,7 @@ func (api API) login(c *gin.Context) {
 	if req.Nickname == "" {
 		req.Nickname = "微信用户"
 	}
-	user, err := api.store.Login(req.OpenID, req.Nickname)
+	user, err := api.store.Login(req.UserID, req.OpenID, req.Nickname, req.Avatar)
 	if err != nil {
 		fail(c, err)
 		return

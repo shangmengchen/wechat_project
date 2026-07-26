@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -9,18 +10,26 @@ import (
 	"strings"
 	"time"
 
+	"couple-mini/backend/configs"
 	"couple-mini/backend/internal/model"
+	"couple-mini/backend/internal/pkg/auth"
+	"couple-mini/backend/internal/pkg/httpmw"
+	wechatcli "couple-mini/backend/internal/pkg/wechat"
 	"couple-mini/backend/internal/service"
 
 	"github.com/gin-gonic/gin"
 )
 
 type API struct {
-	service *service.Service
+	service      *service.Service
+	wechatClient *wechatcli.Client
 }
 
-func New(service *service.Service) *API {
-	return &API{service: service}
+func New(service *service.Service, wechatClient *wechatcli.Client) *API {
+	return &API{
+		service:      service,
+		wechatClient: wechatClient,
+	}
 }
 
 func (api *API) Health(c *gin.Context) {
@@ -32,30 +41,53 @@ func (api *API) Login(c *gin.Context) {
 	if !bindJSON(c, req) {
 		return
 	}
-	if req.OpenID == "" {
-		req.OpenID = "mock-openid-" + req.Code
-	}
+	req.UserID = strings.TrimSpace(req.UserID)
+	req.Nickname = strings.TrimSpace(req.Nickname)
+	req.Avatar = strings.TrimSpace(req.Avatar)
+
 	if req.Nickname == "" {
 		req.Nickname = "WeChat User"
 	}
-	user, token, err := api.service.Login(req)
+
+	if strings.TrimSpace(req.OpenID) == "" {
+		session, err := api.exchangeOpenID(c.Request.Context(), req.Code)
+		if err != nil {
+			fail(c, err)
+			return
+		}
+		req.OpenID = session.OpenID
+	}
+
+	user, err := api.service.Login(req)
 	if err != nil {
 		fail(c, err)
 		return
 	}
+
+	cfg := configs.GetGlobalConfig()
+	token, err := auth.SignToken(
+		cfg.AuthConfig.TokenSecret,
+		time.Duration(cfg.AuthConfig.TokenTTLHours)*time.Hour,
+		user.ID,
+		user.OpenID,
+	)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+
 	ok(c, gin.H{"token": token, "user": user})
 }
 
+func (api *API) SyncState(c *gin.Context) {
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.SyncState(userID)
+	respond(c, data, err)
+}
+
 func (api *API) GeneratePairCode(c *gin.Context) {
-	req := &service.GeneratePairCodeRequest{}
-	if !bindJSON(c, req) {
-		return
-	}
-	if strings.TrimSpace(req.UserID) == "" {
-		badRequest(c, "userId required")
-		return
-	}
-	couple, err := api.service.GeneratePairCode(req)
+	userID := httpmw.GetCurrentUserID(c)
+	couple, err := api.service.GeneratePairCode(userID)
 	respond(c, couple, err)
 }
 
@@ -69,7 +101,7 @@ func (api *API) ConfirmPair(c *gin.Context) {
 		badRequest(c, "invalid pair code")
 		return
 	}
-	couple, err := api.service.ConfirmPair(req)
+	couple, err := api.service.ConfirmPair(httpmw.GetCurrentUserID(c), req)
 	respond(c, couple, err)
 }
 
@@ -82,7 +114,7 @@ func (api *API) UpdateLoveDate(c *gin.Context) {
 		badRequest(c, "loveDate required")
 		return
 	}
-	couple, err := api.service.UpdateLoveDate(req)
+	couple, err := api.service.UpdateLoveDate(httpmw.GetCurrentUserID(c), req)
 	respond(c, couple, err)
 }
 
@@ -96,12 +128,12 @@ func (api *API) UpdateUserProfile(c *gin.Context) {
 		badRequest(c, "nickname required")
 		return
 	}
-	user, err := api.service.UpdateUserProfile(req)
+	user, err := api.service.UpdateUserProfile(httpmw.GetCurrentUserID(c), req)
 	respond(c, user, err)
 }
 
 func (api *API) Dashboard(c *gin.Context) {
-	data, err := api.service.Dashboard(c.Query("userId"))
+	data, err := api.service.Dashboard(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -136,7 +168,7 @@ func (api *API) UploadImage(c *gin.Context) {
 }
 
 func (api *API) Moments(c *gin.Context) {
-	data, err := api.service.Moments()
+	data, err := api.service.Moments(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -149,19 +181,13 @@ func (api *API) CreateMoment(c *gin.Context) {
 		badRequest(c, "content required")
 		return
 	}
-	if req.Author == "" {
-		req.Author = "Xiao Yu"
-	}
-	if req.Avatar == "" {
-		req.Avatar = "X"
-	}
 	req.TimeLabel = "just now"
-	data, err := api.service.AddMoment(req)
+	data, err := api.service.AddMoment(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
 func (api *API) DeleteMoment(c *gin.Context) {
-	respond(c, gin.H{"deleted": true}, api.service.DeleteMoment(c.Param("id")))
+	respond(c, gin.H{"deleted": true}, api.service.DeleteMoment(httpmw.GetCurrentUserID(c), c.Param("id")))
 }
 
 func (api *API) UpdateMomentLiked(c *gin.Context) {
@@ -169,12 +195,12 @@ func (api *API) UpdateMomentLiked(c *gin.Context) {
 	if !bindJSON(c, req) {
 		return
 	}
-	data, err := api.service.UpdateMomentLiked(c.Param("id"), req)
+	data, err := api.service.UpdateMomentLiked(httpmw.GetCurrentUserID(c), c.Param("id"), req)
 	respond(c, data, err)
 }
 
 func (api *API) Tasks(c *gin.Context) {
-	data, err := api.service.Tasks()
+	data, err := api.service.Tasks(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -196,23 +222,23 @@ func (api *API) CreateTask(c *gin.Context) {
 	if strings.TrimSpace(req.Tag) == "" {
 		req.Tag = "life"
 	}
-	data, err := api.service.AddTask(req)
+	data, err := api.service.AddTask(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
 func (api *API) DeleteTask(c *gin.Context) {
-	respond(c, gin.H{"deleted": true}, api.service.DeleteTask(c.Param("id")))
+	respond(c, gin.H{"deleted": true}, api.service.DeleteTask(httpmw.GetCurrentUserID(c), c.Param("id")))
 }
 
 func (api *API) TaskAction(status model.TaskStatus) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		data, err := api.service.UpdateTaskStatus(c.Param("id"), status)
+		data, err := api.service.UpdateTaskStatus(httpmw.GetCurrentUserID(c), c.Param("id"), status)
 		respond(c, data, err)
 	}
 }
 
 func (api *API) ScheduledTasks(c *gin.Context) {
-	data, err := api.service.ScheduledTasks()
+	data, err := api.service.ScheduledTasks(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -237,21 +263,21 @@ func (api *API) CreateScheduledTask(c *gin.Context) {
 	if req.Next == "" {
 		req.Next = "today " + req.Time
 	}
-	data, err := api.service.AddScheduledTask(req)
+	data, err := api.service.AddScheduledTask(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
 func (api *API) DeleteScheduledTask(c *gin.Context) {
-	respond(c, gin.H{"deleted": true}, api.service.DeleteScheduledTask(c.Param("id")))
+	respond(c, gin.H{"deleted": true}, api.service.DeleteScheduledTask(httpmw.GetCurrentUserID(c), c.Param("id")))
 }
 
 func (api *API) ConfirmScheduledTask(c *gin.Context) {
-	data, err := api.service.ConfirmScheduledTask(c.Param("id"))
+	data, err := api.service.ConfirmScheduledTask(httpmw.GetCurrentUserID(c), c.Param("id"))
 	respond(c, data, err)
 }
 
 func (api *API) Dishes(c *gin.Context) {
-	data, err := api.service.Dishes()
+	data, err := api.service.Dishes(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -271,12 +297,12 @@ func (api *API) CreateDish(c *gin.Context) {
 		req.Meal = "any"
 	}
 	req.Enabled = true
-	data, err := api.service.AddDish(req)
+	data, err := api.service.AddDish(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
 func (api *API) DeleteDish(c *gin.Context) {
-	respond(c, gin.H{"deleted": true}, api.service.DeleteDish(c.Param("id")))
+	respond(c, gin.H{"deleted": true}, api.service.DeleteDish(httpmw.GetCurrentUserID(c), c.Param("id")))
 }
 
 func (api *API) UpdateDishEnabled(c *gin.Context) {
@@ -284,12 +310,12 @@ func (api *API) UpdateDishEnabled(c *gin.Context) {
 	if !bindJSON(c, req) {
 		return
 	}
-	data, err := api.service.UpdateDishEnabled(c.Param("id"), req)
+	data, err := api.service.UpdateDishEnabled(httpmw.GetCurrentUserID(c), c.Param("id"), req)
 	respond(c, data, err)
 }
 
 func (api *API) Orders(c *gin.Context) {
-	data, err := api.service.Orders()
+	data, err := api.service.Orders(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -308,12 +334,12 @@ func (api *API) CreateOrder(c *gin.Context) {
 		badRequest(c, "dishes required")
 		return
 	}
-	data, err := api.service.AddOrder(req)
+	data, err := api.service.AddOrder(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
 func (api *API) Goals(c *gin.Context) {
-	data, err := api.service.Goals()
+	data, err := api.service.Goals(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
 }
 
@@ -330,7 +356,7 @@ func (api *API) CreateGoal(c *gin.Context) {
 		req.Period = "month"
 	}
 	req.Status = "active"
-	data, err := api.service.AddGoal(req)
+	data, err := api.service.AddGoal(httpmw.GetCurrentUserID(c), req)
 	respond(c, data, err)
 }
 
@@ -343,7 +369,7 @@ func (api *API) UpdateGoalValue(c *gin.Context) {
 		badRequest(c, "currentValue must be >= 0")
 		return
 	}
-	data, err := api.service.UpdateGoalValue(c.Param("id"), req)
+	data, err := api.service.UpdateGoalValue(httpmw.GetCurrentUserID(c), c.Param("id"), req)
 	respond(c, data, err)
 }
 
@@ -356,12 +382,23 @@ func (api *API) UpdateGoalStatus(c *gin.Context) {
 		badRequest(c, "invalid status")
 		return
 	}
-	data, err := api.service.UpdateGoalStatus(c.Param("id"), req)
+	data, err := api.service.UpdateGoalStatus(httpmw.GetCurrentUserID(c), c.Param("id"), req)
 	respond(c, data, err)
 }
 
 func (api *API) DeleteGoal(c *gin.Context) {
-	respond(c, gin.H{"deleted": true}, api.service.DeleteGoal(c.Param("id")))
+	respond(c, gin.H{"deleted": true}, api.service.DeleteGoal(httpmw.GetCurrentUserID(c), c.Param("id")))
+}
+
+func (api *API) exchangeOpenID(ctx context.Context, code string) (wechatcli.Session, error) {
+	if api.wechatClient != nil && api.wechatClient.Enabled() {
+		return api.wechatClient.Code2Session(ctx, code)
+	}
+	code = strings.TrimSpace(code)
+	if code == "" {
+		return wechatcli.Session{}, fmt.Errorf("login code required")
+	}
+	return wechatcli.Session{OpenID: "mock-openid-" + code}, nil
 }
 
 func absoluteURL(c *gin.Context, path string) string {

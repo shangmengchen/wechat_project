@@ -7,16 +7,22 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"couple-mini/backend/configs"
+	"couple-mini/backend/internal/pkg/auth"
 	"couple-mini/backend/internal/pkg/adminview"
 	applog "couple-mini/backend/internal/pkg/logger"
 
 	"github.com/gin-gonic/gin"
 )
 
-const requestIDKey = "request_id"
+const (
+	requestIDKey    = "request_id"
+	currentUserIDKey = "current_user_id"
+	currentOpenIDKey = "current_openid"
+)
 
 func RequestID() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -82,6 +88,32 @@ func AdminBasicAuth() gin.HandlerFunc {
 	}
 }
 
+func RequireAuth() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		header := strings.TrimSpace(c.GetHeader("Authorization"))
+		if !strings.HasPrefix(header, "Bearer ") {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    http.StatusUnauthorized,
+				"message": "unauthorized",
+			})
+			return
+		}
+		token := strings.TrimSpace(strings.TrimPrefix(header, "Bearer "))
+		cfg := configs.GetGlobalConfig()
+		claims, err := auth.ParseToken(cfg.AuthConfig.TokenSecret, token)
+		if err != nil {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{
+				"code":    http.StatusUnauthorized,
+				"message": "unauthorized",
+			})
+			return
+		}
+		c.Set(currentUserIDKey, claims.UserID)
+		c.Set(currentOpenIDKey, claims.OpenID)
+		c.Next()
+	}
+}
+
 func Recovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
@@ -108,6 +140,24 @@ func GetRequestID(c *gin.Context) string {
 	if value, ok := c.Get(requestIDKey); ok {
 		if requestID, ok := value.(string); ok {
 			return requestID
+		}
+	}
+	return ""
+}
+
+func GetCurrentUserID(c *gin.Context) string {
+	if value, ok := c.Get(currentUserIDKey); ok {
+		if userID, ok := value.(string); ok {
+			return userID
+		}
+	}
+	return ""
+}
+
+func GetCurrentOpenID(c *gin.Context) string {
+	if value, ok := c.Get(currentOpenIDKey); ok {
+		if openID, ok := value.(string); ok {
+			return openID
 		}
 	}
 	return ""

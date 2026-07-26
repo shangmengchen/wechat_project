@@ -1,15 +1,21 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
 
 Page({
   data: {
-    users: api.mock.users,
+    users: normalizeUsers(api.mock.users),
     dashboard: api.mock.dashboard,
-    expanded: false
+    expanded: false,
+    profileForm: {
+      nickname: "",
+      wxid: ""
+    }
   },
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
@@ -18,35 +24,105 @@ Page({
     this.load();
   },
 
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
+  },
+
   load() {
     return api.getDashboard().then((res) => {
       const data = res.data || res;
-      const users = data.users || api.mock.users;
+      const users = normalizeUsers(data.users || api.mock.users);
+      const me = users.me;
       this.setData({
         users,
         dashboard: data.dashboard || api.mock.dashboard,
-        birthdayValue: toDateValue(users.me.birthday)
+        birthdayValue: toDateValue(me.birthday),
+        profileForm: {
+          nickname: me.name || "",
+          wxid: me.wxid || ""
+        }
       });
     });
   },
 
   changeLoveDate(e) {
-    const loveDate = e.detail.value;
-    api.updateLoveDate(loveDate).then(() => {
-      wx.showToast({ title: "已更新", icon: "success" });
+    api.updateLoveDate(e.detail.value).then(() => {
+      wx.showToast({ title: "Updated", icon: "success" });
       this.load();
     });
   },
 
   changeBirthday(e) {
-    const birthday = e.detail.value;
+    this.updateProfile({ birthday: e.detail.value });
+  },
+
+  changeNickname(e) {
+    this.setData({ "profileForm.nickname": e.detail.value });
+  },
+
+  changeWxid(e) {
+    this.setData({ "profileForm.wxid": e.detail.value });
+  },
+
+  saveProfile() {
+    this.updateProfile({
+      nickname: (this.data.profileForm.nickname || "").trim(),
+      wxid: (this.data.profileForm.wxid || "").trim()
+    });
+  },
+
+  syncWechatProfile() {
+    const app = getApp();
+    const applyProfile = (profile) => {
+      const nickname = (profile.nickName || "").trim();
+      const avatar = profile.avatarUrl || "";
+      if (!nickname && !avatar) {
+        wx.showToast({ title: "No WeChat profile", icon: "none" });
+        return;
+      }
+      Promise.resolve(app.syncUserProfile({ nickname, avatar }))
+        .then(() => {
+          const me = this.data.users.me;
+          return api.updateUserProfile(me.id, {
+            nickname: nickname || me.name,
+            avatar: avatar || me.avatar,
+            birthday: this.data.birthdayValue || "",
+            wxid: (this.data.profileForm.wxid || me.wxid || "").trim()
+          });
+        })
+        .then(() => {
+          wx.showToast({ title: "Synced", icon: "success" });
+          this.load();
+        });
+    };
+
+    if (wx.getUserProfile) {
+      wx.getUserProfile({
+        desc: "Sync nickname and avatar",
+        success: (res) => applyProfile(res.userInfo || {}),
+        fail: () => wx.showToast({ title: "Auth denied", icon: "none" })
+      });
+      return;
+    }
+
+    wx.showToast({ title: "getUserProfile unsupported", icon: "none" });
+  },
+
+  updateProfile(patch) {
     const me = this.data.users.me;
-    api.updateUserProfile(me.id, {
-      nickname: me.name,
-      birthday,
-      wxid: me.wxid
-    }).then(() => {
-      wx.showToast({ title: "已更新", icon: "success" });
+    const next = {
+      nickname: normalizeText(patch.nickname, me.name),
+      avatar: normalizeText(patch.avatar, me.avatar),
+      birthday: normalizeText(patch.birthday, this.data.birthdayValue || toDateValue(me.birthday)),
+      wxid: normalizeText(patch.wxid, this.data.profileForm.wxid || me.wxid)
+    };
+
+    api.updateUserProfile(me.id, next).then((ret) => {
+      if (ret && ret.code !== undefined && ret.code !== 0) {
+        wx.showToast({ title: ret.message || "Update failed", icon: "none" });
+        return;
+      }
+      wx.showToast({ title: "Updated", icon: "success" });
       this.load();
     });
   },
@@ -56,9 +132,31 @@ Page({
   }
 });
 
+function normalizeText(value, fallback) {
+  if (value === undefined || value === null || value === "") {
+    return fallback || "";
+  }
+  return value;
+}
+
+function normalizeUsers(users) {
+  const next = users || api.mock.users;
+  return {
+    me: normalizeUser(next.me || api.mock.users.me),
+    partner: normalizeUser(next.partner || api.mock.users.partner)
+  };
+}
+
+function normalizeUser(user) {
+  const next = { ...user };
+  next.avatarText = String(next.name || "?").slice(0, 1);
+  if (!next.avatar) next.avatar = "";
+  return next;
+}
+
 function toDateValue(value) {
   if (/^\d{4}-\d{2}-\d{2}$/.test(value || "")) return value;
-  const match = String(value || "").match(/^(\d{1,2})月(\d{1,2})日$/);
+  const match = String(value || "").match(/^(\d{1,2})\D+(\d{1,2})/);
   if (!match) return "2000-01-01";
   const month = match[1].padStart(2, "0");
   const day = match[2].padStart(2, "0");

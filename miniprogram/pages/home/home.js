@@ -1,5 +1,6 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
 
 Page({
   data: {
@@ -9,12 +10,17 @@ Page({
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
   onShow() {
     if (!session.guardCouplePage()) return;
     this.load();
+  },
+
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
   },
 
   onPullDownRefresh() {

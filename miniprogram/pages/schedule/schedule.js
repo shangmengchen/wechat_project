@@ -1,5 +1,8 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
+
+const cycleOptions = ["Every day", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
 Page({
   data: {
@@ -8,8 +11,8 @@ Page({
     pendingCount: 0,
     noticeText: "",
     showScheduleForm: false,
-    cycleOptions: ["每天", "每周一", "每周二", "每周三", "每周四", "每周五", "每周六", "每周日"],
-    assigneeOptions: ["双方", api.mock.users.me.name, api.mock.users.partner.name, "轮流", "自定义"],
+    cycleOptions,
+    assigneeOptions: ["Both", api.mock.users.me.name, api.mock.users.partner.name, "Rotate", "Custom"],
     cycleIndex: 0,
     assigneeIndex: 0,
     scheduleForm: {
@@ -21,6 +24,7 @@ Page({
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
@@ -28,6 +32,10 @@ Page({
     if (!session.guardCouplePage()) return;
     this.load();
     this.checkDueReminders();
+  },
+
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
   },
 
   goBack() {
@@ -40,7 +48,7 @@ Page({
     api.getDashboard().then((res) => {
       const data = res.data || res;
       const users = data.users || api.mock.users;
-      this.setData({ assigneeOptions: ["双方", users.me.name, users.partner.name, "轮流", "自定义"] });
+      this.setData({ assigneeOptions: ["Both", users.me.name, users.partner.name, "Rotate", "Custom"] });
     });
     return api.getSchedules().then((res) => this.setSchedules(res.data || res || api.mock.schedules));
   },
@@ -94,13 +102,13 @@ Page({
     const form = this.data.scheduleForm;
     const title = (form.title || "").trim();
     if (!title) {
-      wx.showToast({ title: "请输入任务内容", icon: "none" });
+      wx.showToast({ title: "Task title required", icon: "none" });
       return;
     }
     const selectedAssignee = this.data.assigneeOptions[this.data.assigneeIndex];
-    const assignee = selectedAssignee === "自定义" ? (form.assigneeCustom || "").trim() : selectedAssignee;
+    const assignee = selectedAssignee === "Custom" ? (form.assigneeCustom || "").trim() : selectedAssignee;
     if (!assignee) {
-      wx.showToast({ title: "请输入负责人", icon: "none" });
+      wx.showToast({ title: "Assignee required", icon: "none" });
       return;
     }
     const task = {
@@ -112,7 +120,7 @@ Page({
     };
     api.createSchedule(task).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "创建失败", icon: "none" });
+        wx.showToast({ title: ret.message || "Create failed", icon: "none" });
         return;
       }
       const data = ret.data || { ...task, id: `local-${Date.now()}`, pending: true };
@@ -124,8 +132,8 @@ Page({
   deleteSchedule(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "删除定时任务",
-      content: "确定删除这条提醒吗？",
+      title: "Delete reminder",
+      content: "Delete this scheduled task?",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteSchedule(id).then(() => {
@@ -143,8 +151,8 @@ Page({
     if (wx.getStorageSync(key)) return;
     wx.setStorageSync(key, true);
     wx.showModal({
-      title: "定时提醒",
-      content: `${due[0].title} 到提醒时间了`,
+      title: "Reminder",
+      content: `${due[0].title} is due now`,
       showCancel: false
     });
   },
@@ -155,22 +163,24 @@ Page({
     this.setData({
       schedules: normalized,
       pendingCount: pending.length,
-      noticeText: pending.length ? `${pending[0].next} 有 ${pending.length} 个任务需要完成` : "暂无待确认提醒"
+      noticeText: pending.length ? `${pending[0].next} · ${pending.length} task(s) pending` : "No pending reminders"
     });
   }
 });
 
 function nextText(cycle, time) {
-  if ((cycle || "").includes("每天")) return `今天 ${time}`;
-  return `${cycle || "每天"} ${time}`;
+  if ((cycle || "").toLowerCase().includes("every day")) return `Today ${time}`;
+  return `${cycle || "Every day"} ${time}`;
 }
 
 function dueSchedules(schedules) {
   const now = new Date();
   const current = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const day = ["每周日", "每周一", "每周二", "每周三", "每周四", "每周五", "每周六"][now.getDay()];
+  const weekdays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  const day = weekdays[now.getDay()];
   return (schedules || []).filter((item) => {
+    const cycle = String(item.cycle || "");
     if (!item.pending || !item.time || item.time > current) return false;
-    return item.cycle === "每天" || item.cycle === day;
+    return cycle === "Every day" || cycle === day;
   });
 }

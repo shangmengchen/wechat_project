@@ -1,0 +1,13 @@
+{
+  "name": "couple-mini-program",
+  "private": true,
+  "version": "1.0.0",
+  "description": "WeChat Mini Program upload tooling",
+  "scripts": {
+    "upload": "node scripts/upload.js",
+    "upload:ci": "node scripts/upload.js"
+  },
+  "devDependencies": {
+    "miniprogram-ci": "^2.1.14"
+  }
+}

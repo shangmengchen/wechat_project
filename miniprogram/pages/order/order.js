@@ -1,25 +1,37 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
+const pageSync = require("../../utils/pageSync");
 
 Page({
   data: {
     active: "order",
-    meal: "午餐",
+    meal: "lunch",
     selected: [],
+    users: normalizeUsers(api.mock.users),
     dishes: api.mock.dishes,
     history: api.mock.orderHistory
   },
 
   onLoad() {
     if (!session.guardCouplePage()) return;
+    pageSync.registerPageRefresh(this);
     this.load();
   },
 
   onShow() {
     if (!session.guardCouplePage()) return;
+    this.load();
+  },
+
+  onUnload() {
+    pageSync.unregisterPageRefresh(this);
   },
 
   load() {
+    api.getDashboard().then((res) => {
+      const data = res.data || res;
+      this.setData({ users: normalizeUsers(data.users || api.mock.users) });
+    });
     this.loadDishes();
     return this.loadOrders();
   },
@@ -49,7 +61,10 @@ Page({
   },
 
   randomPick() {
-    const available = this.data.dishes.filter((item) => item.enabled && (item.meal === this.data.meal || item.meal === "通用"));
+    const available = this.data.dishes.filter((item) => {
+      const meal = normalizeMeal(item.meal);
+      return item.enabled && (meal === this.data.meal || meal === "any");
+    });
     if (!available.length) return;
     const pick = available[Math.floor(Math.random() * available.length)];
     this.setData({ selected: [pick.id] }, () => this.setDishes(this.data.dishes));
@@ -58,12 +73,12 @@ Page({
   createOrder() {
     const selectedDishes = this.data.dishes.filter((item) => this.data.selected.includes(item.id));
     if (!selectedDishes.length) {
-      wx.showToast({ title: "先选一道菜", icon: "none" });
+      wx.showToast({ title: "Choose at least one dish", icon: "none" });
       return;
     }
     api.createOrder({
       meal: this.data.meal,
-      picker: `${api.mock.users.me.name}选的`,
+      picker: `${this.data.users.me.name} picked`,
       dishes: selectedDishes.map((item) => item.name)
     }).then((ret) => {
       const data = ret.data || ret;
@@ -72,19 +87,19 @@ Page({
         history: [data].concat(this.data.history),
         active: "history"
       }, () => this.setDishes(this.data.dishes));
-      wx.showToast({ title: "已记录", icon: "success" });
+      wx.showToast({ title: "Saved", icon: "success" });
     });
   },
 
   addDish() {
     wx.showModal({
-      title: "添加菜品",
+      title: "Add dish",
       editable: true,
-      placeholderText: "输入菜品名称",
+      placeholderText: "Dish name",
       success: (res) => {
         const name = (res.content || "").trim();
         if (!res.confirm || !name) return;
-        const dish = { name, icon: "🍽️", meal: this.data.meal, enabled: true };
+        const dish = { name, icon: "dish", meal: this.data.meal, enabled: true };
         api.createDish(dish).then((ret) => {
           const data = ret.data || { ...dish, id: `local-${Date.now()}` };
           this.setDishes([data].concat(this.data.dishes));
@@ -96,8 +111,8 @@ Page({
   deleteDish(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "删除菜品",
-      content: "确定删除这个菜品吗？",
+      title: "Delete dish",
+      content: "Delete this dish?",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteDish(id).then(() => this.setDishes(this.data.dishes.filter((item) => item.id !== id)));
@@ -116,10 +131,38 @@ Page({
 
   setDishes(dishes) {
     this.setData({
-      dishes: dishes.map((dish) => ({
+      dishes: (dishes || []).map((dish) => ({
         ...dish,
+        meal: normalizeMeal(dish.meal),
         selected: this.data.selected.includes(dish.id)
       }))
     });
   }
 });
+
+function normalizeMeal(meal) {
+  const value = String(meal || "").toLowerCase();
+  if (value.includes("breakfast")) return "breakfast";
+  if (value.includes("lunch")) return "lunch";
+  if (value.includes("dinner")) return "dinner";
+  if (value.includes("any")) return "any";
+  if (value === "\u65e9\u9910") return "breakfast";
+  if (value === "\u5348\u9910") return "lunch";
+  if (value === "\u665a\u9910") return "dinner";
+  if (value === "\u901a\u7528") return "any";
+  return "any";
+}
+
+function normalizeUsers(users) {
+  const next = users || api.mock.users;
+  return {
+    me: normalizeUser(next.me || api.mock.users.me),
+    partner: normalizeUser(next.partner || api.mock.users.partner)
+  };
+}
+
+function normalizeUser(user) {
+  const next = { ...user };
+  next.avatarText = String(next.name || "?").slice(0, 1);
+  return next;
+}

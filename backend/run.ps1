@@ -17,6 +17,10 @@ param(
   [string]$AdminUsername = $env:ADMIN_USERNAME,
   [string]$AdminPassword = $env:ADMIN_PASSWORD,
   [string]$AdminTitle = $env:ADMIN_TITLE,
+  [string]$AuthTokenSecret = $env:AUTH_TOKEN_SECRET,
+  [string]$AuthTokenTtlHours = $env:AUTH_TOKEN_TTL_HOURS,
+  [string]$WeChatAppId = $env:WECHAT_APP_ID,
+  [string]$WeChatSecret = $env:WECHAT_SECRET,
   [switch]$SkipAdminBuild
 )
 
@@ -141,6 +145,18 @@ function Start-Local {
   if (-not [string]::IsNullOrWhiteSpace($AdminTitle)) {
     $env:ADMIN_TITLE = $AdminTitle
   }
+  if (-not [string]::IsNullOrWhiteSpace($AuthTokenSecret)) {
+    $env:AUTH_TOKEN_SECRET = $AuthTokenSecret
+  }
+  if (-not [string]::IsNullOrWhiteSpace($AuthTokenTtlHours)) {
+    $env:AUTH_TOKEN_TTL_HOURS = $AuthTokenTtlHours
+  }
+  if (-not [string]::IsNullOrWhiteSpace($WeChatAppId)) {
+    $env:WECHAT_APP_ID = $WeChatAppId
+  }
+  if (-not [string]::IsNullOrWhiteSpace($WeChatSecret)) {
+    $env:WECHAT_SECRET = $WeChatSecret
+  }
 
   if ([string]::IsNullOrEmpty($MySqlPassword)) {
     $env:MYSQL_DSN = "${MySqlUser}@tcp($($MySqlHost):$MySqlPort)/${MySqlDatabase}?charset=utf8mb4&parseTime=true&loc=Local"
@@ -223,6 +239,18 @@ function Start-Docker {
 	if (-not [string]::IsNullOrWhiteSpace($AdminTitle)) {
 		Set-EnvValue -Path $selectedEnvFile -Key "ADMIN_TITLE" -Value $AdminTitle
 	}
+  if (-not [string]::IsNullOrWhiteSpace($AuthTokenSecret)) {
+    Set-EnvValue -Path $selectedEnvFile -Key "AUTH_TOKEN_SECRET" -Value $AuthTokenSecret
+  }
+  if (-not [string]::IsNullOrWhiteSpace($AuthTokenTtlHours)) {
+    Set-EnvValue -Path $selectedEnvFile -Key "AUTH_TOKEN_TTL_HOURS" -Value $AuthTokenTtlHours
+  }
+  if (-not [string]::IsNullOrWhiteSpace($WeChatAppId)) {
+    Set-EnvValue -Path $selectedEnvFile -Key "WECHAT_APP_ID" -Value $WeChatAppId
+  }
+  if (-not [string]::IsNullOrWhiteSpace($WeChatSecret)) {
+    Set-EnvValue -Path $selectedEnvFile -Key "WECHAT_SECRET" -Value $WeChatSecret
+  }
 
 	New-Item -ItemType Directory -Force -Path (Join-Path $ScriptDir "logs") | Out-Null
 	New-Item -ItemType Directory -Force -Path (Join-Path $ScriptDir "logs\admin") | Out-Null

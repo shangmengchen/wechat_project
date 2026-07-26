@@ -15,6 +15,8 @@ type GlobalConfig struct {
 	DbConfig    DbConfig    `yaml:"db"`
 	LogConfig   LogConfig   `yaml:"log"`
 	AdminConfig AdminConfig `yaml:"admin"`
+	AuthConfig  AuthConfig  `yaml:"auth"`
+	WeChatConfig WeChatConfig `yaml:"wechat"`
 }
 
 type AppConfig struct {
@@ -58,6 +60,16 @@ type AdminConfig struct {
 	Title             string `yaml:"title"`
 	SampleIntervalSec int    `yaml:"sample_interval_sec"`
 	HistoryLimit      int    `yaml:"history_limit"`
+}
+
+type AuthConfig struct {
+	TokenSecret   string `yaml:"token_secret"`
+	TokenTTLHours int    `yaml:"token_ttl_hours"`
+}
+
+type WeChatConfig struct {
+	AppID  string `yaml:"app_id"`
+	Secret string `yaml:"secret"`
 }
 
 var (
@@ -119,6 +131,14 @@ func defaultConfig() GlobalConfig {
 			Title:             "Couple Mini Admin",
 			SampleIntervalSec: 5,
 			HistoryLimit:      120,
+		},
+		AuthConfig: AuthConfig{
+			TokenSecret:   "change-me-token-secret",
+			TokenTTLHours: 168,
+		},
+		WeChatConfig: WeChatConfig{
+			AppID:  "",
+			Secret: "",
 		},
 	}
 }
@@ -242,6 +262,22 @@ func overrideFromEnv(cfg *GlobalConfig) {
 		if parsed, err := strconv.Atoi(value); err == nil {
 			cfg.AdminConfig.HistoryLimit = parsed
 		}
+	}
+
+	if value := os.Getenv("AUTH_TOKEN_SECRET"); value != "" || hasEnv("AUTH_TOKEN_SECRET") {
+		cfg.AuthConfig.TokenSecret = value
+	}
+	if value := os.Getenv("AUTH_TOKEN_TTL_HOURS"); value != "" {
+		if parsed, err := strconv.Atoi(value); err == nil {
+			cfg.AuthConfig.TokenTTLHours = parsed
+		}
+	}
+
+	if value := os.Getenv("WECHAT_APP_ID"); value != "" {
+		cfg.WeChatConfig.AppID = value
+	}
+	if value := os.Getenv("WECHAT_SECRET"); value != "" || hasEnv("WECHAT_SECRET") {
+		cfg.WeChatConfig.Secret = value
 	}
 }
 

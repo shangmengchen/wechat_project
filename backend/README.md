@@ -2,6 +2,8 @@
 
 Gin + GORM + MySQL REST API for the couple mini program.
 
+Current app date reference: July 25, 2026.
+
 The backend now follows a `ppm_web_go`-style layered layout:
 
 - `main.go` / `cmd/server/main.go`
@@ -76,6 +78,61 @@ MYSQL_CREATE_DATABASE=true
 MYSQL_AUTO_MIGRATE=true
 MYSQL_AUTO_SEED=false
 ```
+
+## WeChat Auth And Sync
+
+The mini-program backend now uses this session flow:
+
+1. Frontend calls `wx.login()`
+2. Frontend posts `code` to `POST /api/v1/auth/login`
+3. Backend calls WeChat `jscode2session` when `WECHAT_APP_ID` and `WECHAT_SECRET` are configured
+4. Backend creates or updates the user by `openid`
+5. Backend signs a Bearer token and all business APIs use that token
+
+Required config:
+
+```bash
+AUTH_TOKEN_SECRET=change_me_token_secret
+AUTH_TOKEN_TTL_HOURS=168
+WECHAT_APP_ID=your_wechat_miniprogram_appid
+WECHAT_SECRET=your_wechat_miniprogram_secret
+```
+
+Equivalent `configs/config.yml` section:
+
+```yaml
+auth:
+  token_secret: "change_me_token_secret"
+  token_ttl_hours: 168
+
+wechat:
+  app_id: "your_wechat_miniprogram_appid"
+  secret: "your_wechat_miniprogram_secret"
+```
+
+If `WECHAT_APP_ID` / `WECHAT_SECRET` are empty, the backend falls back to a local mock-openid flow for development only.
+
+## Couple Consistency Model
+
+Business data is now scoped by the authenticated user’s couple:
+
+- dashboard
+- moments
+- tasks
+- scheduled tasks
+- dishes
+- orders
+- goals
+- love date
+- profile update
+
+The frontend also polls:
+
+- `GET /api/v1/sync/state`
+
+This endpoint returns the current couple pairing state and a couple-level `version`.
+Whenever one side writes business data, the backend updates that couple version.
+The active page in the mini-program then auto-refreshes when the version changes, so the other user sees the latest backend state without needing to leave and re-enter the page.
 
 ## Logs
 
@@ -213,6 +270,7 @@ backend/
 ## Main Endpoints
 
 - `POST /api/v1/auth/login`
+- `GET /api/v1/sync/state`
 - `POST /api/v1/pair/code`
 - `POST /api/v1/pair/confirm`
 - `PATCH /api/v1/couple/love-date`
@@ -244,3 +302,9 @@ backend/
 - `PATCH /api/v1/goals/{id}/value`
 - `PATCH /api/v1/goals/{id}/status`
 - `DELETE /api/v1/goals/{id}`
+
+All endpoints except `/api/v1/auth/login` now require:
+
+```http
+Authorization: Bearer <token>
+```
