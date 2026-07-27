@@ -1,29 +1,29 @@
 <view class="page safe-bottom order-page">
   <view class="status-row">
     <text>9:41</text>
-    <text>WiFi</text>
+    <text>信号满格</text>
   </view>
   <view class="title-row">
     <view class="back-dot"></view>
-    <view class="page-title">Today Order</view>
+    <view class="page-title">今日点餐</view>
     <view></view>
   </view>
 
   <view class="pill-tabs order-tabs">
-    <view bindtap="switchTab" data-key="order" class="pill-tab {{active === 'order' ? 'active-green' : ''}}">Order</view>
-    <view bindtap="switchTab" data-key="manage" class="pill-tab {{active === 'manage' ? 'active-green' : ''}}">Manage</view>
-    <view bindtap="switchTab" data-key="history" class="pill-tab {{active === 'history' ? 'active-green' : ''}}">History</view>
+    <view bindtap="switchTab" data-key="order" class="pill-tab {{active === 'order' ? 'active-green' : ''}}">点餐</view>
+    <view bindtap="switchTab" data-key="manage" class="pill-tab {{active === 'manage' ? 'active-green' : ''}}">菜品</view>
+    <view bindtap="switchTab" data-key="history" class="pill-tab {{active === 'history' ? 'active-green' : ''}}">历史</view>
   </view>
 
   <view wx:if="{{active === 'order'}}">
     <view class="meal-tabs">
-      <view bindtap="switchMeal" data-meal="breakfast" class="{{meal === 'breakfast' ? 'meal-active' : ''}}">Breakfast</view>
-      <view bindtap="switchMeal" data-meal="lunch" class="{{meal === 'lunch' ? 'meal-active' : ''}}">Lunch</view>
-      <view bindtap="switchMeal" data-meal="dinner" class="{{meal === 'dinner' ? 'meal-active' : ''}}">Dinner</view>
+      <view bindtap="switchMeal" data-meal="breakfast" class="{{meal === 'breakfast' ? 'meal-active' : ''}}">早餐</view>
+      <view bindtap="switchMeal" data-meal="lunch" class="{{meal === 'lunch' ? 'meal-active' : ''}}">午餐</view>
+      <view bindtap="switchMeal" data-meal="dinner" class="{{meal === 'dinner' ? 'meal-active' : ''}}">晚餐</view>
     </view>
     <view class="choose-row">
-      <text>Choose dishes</text>
-      <text>{{selected.length}} selected</text>
+      <text>选择菜品</text>
+      <text>已选 {{selected.length}} 道</text>
     </view>
     <view class="dish-grid">
       <block wx:for="{{dishes}}" wx:key="id">
@@ -32,9 +32,9 @@
           <view>{{item.name}}</view>
         </view>
       </block>
-      <view bindtap="randomPick" class="dish-card random"><text>Random</text></view>
+      <view bindtap="randomPick" class="dish-card random"><text>随机</text></view>
     </view>
-    <button bindtap="createOrder" class="green-btn">Save Order</button>
+    <button bindtap="createOrder" class="green-btn">保存点餐</button>
   </view>
 
   <view wx:elif="{{active === 'manage'}}" class="manage-list">
@@ -42,19 +42,19 @@
       <view class="dish-icon">{{item.icon}}</view>
       <view class="manage-info">
         <view>{{item.name}}</view>
-        <text>{{item.meal}}</text>
+        <text>{{item.mealText}}</text>
       </view>
       <view class="manage-actions">
-        <text bindtap="deleteDish" data-id="{{item.id}}">Delete</text>
+        <text bindtap="deleteDish" data-id="{{item.id}}">删除</text>
         <switch bindchange="changeDishEnabled" data-id="{{item.id}}" checked="{{item.enabled}}" color="#08c994"></switch>
       </view>
     </view>
-    <view bindtap="addDish" class="add-dish">+ Add Dish</view>
+    <view bindtap="addDish" class="add-dish">+ 添加菜品</view>
   </view>
 
   <view wx:else class="history-list">
     <view wx:for="{{history}}" wx:key="id" class="history-card card">
-      <view class="history-head"><text>{{item.date}} / {{item.meal}}</text><text>{{item.picker}}</text></view>
+      <view class="history-head"><text>{{item.date}} / {{item.mealText}}</text><text>{{item.picker}}</text></view>
       <view class="history-dishes">
         <text wx:for="{{item.dishes}}" wx:key="*this">{{item}}</text>
       </view>

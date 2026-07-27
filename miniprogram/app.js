@@ -36,8 +36,11 @@ App({
     this.globalData.isPaired = !!wx.getStorageSync("isPaired");
     this.globalData.userProfile = normalizeProfile(wx.getStorageSync("userProfile"));
     this.pageRefreshHandlers = {};
-    this.sessionReadyPromise = this.ensureSession()
-      .then(() => this.refreshSyncState())
+    this.ensureSession()
+      .then(() => {
+        this.startPairPush();
+        return this.refreshSyncState();
+      })
       .then(() => {
         this.startSyncPolling();
         this.checkScheduleReminders();
@@ -45,6 +48,7 @@ App({
   },
 
   onShow() {
+    this.startPairPush();
     this.refreshSyncState();
     this.checkScheduleReminders();
   },
@@ -90,6 +94,7 @@ App({
               if (token) {
                 this.globalData.token = token;
                 wx.setStorageSync("token", token);
+                this.startPairPush();
               }
 
               if (user.id) {
@@ -117,6 +122,49 @@ App({
 
   syncUserProfile(profilePatch = {}) {
     return this.ensureSession(profilePatch).then(() => this.refreshSyncState());
+  },
+
+  startPairPush() {
+    if (this.globalData.useMockAPI) {
+      return;
+    }
+    const push = require("./utils/push");
+    push.start();
+  },
+
+  handlePairConfirmed(data = {}) {
+    this.globalData.syncState = {
+      paired: true,
+      coupleId: data.coupleId || (this.globalData.syncState && this.globalData.syncState.coupleId) || "",
+      version: Date.now(),
+      updatedAt: new Date().toISOString()
+    };
+    this.globalData.isPaired = true;
+    this.globalData.demoMode = false;
+    wx.setStorageSync("isPaired", true);
+    wx.setStorageSync("demoMode", false);
+    this.gotoPairSuccess();
+  },
+
+  gotoPairSuccess() {
+    const pages = getCurrentPages();
+    const currentPage = pages && pages.length ? pages[pages.length - 1] : null;
+    if (currentPage && currentPage.route === "pages/pair-success/pair-success") {
+      return;
+    }
+    if (this.pairSuccessRedirecting) {
+      return;
+    }
+    this.pairSuccessRedirecting = true;
+    wx.redirectTo({
+      url: "/pages/pair-success/pair-success",
+      fail: () => wx.reLaunch({ url: "/pages/pair-success/pair-success" }),
+      complete: () => {
+        setTimeout(() => {
+          this.pairSuccessRedirecting = false;
+        }, 500);
+      }
+    });
   },
 
   registerPageRefresh(route, handler) {
@@ -158,7 +206,10 @@ App({
       };
       this.globalData.isPaired = !!nextState.paired;
       wx.setStorageSync("isPaired", !!nextState.paired);
-      if (prevState.version && nextState.version && Number(nextState.version) !== Number(prevState.version)) {
+      if (
+        !!nextState.paired !== !!prevState.paired ||
+        (prevState.version && nextState.version && Number(nextState.version) !== Number(prevState.version))
+      ) {
         this.refreshActivePage();
       }
       return this.globalData.syncState;
@@ -188,8 +239,8 @@ App({
       if (wx.getStorageSync(key)) return;
       wx.setStorageSync(key, true);
       wx.showModal({
-        title: "Schedule Reminder",
-        content: `${due[0].title} is due now.`,
+        title: "定时提醒",
+        content: `${due[0].title} 到时间啦`,
         showCancel: false
       });
     });
@@ -206,13 +257,15 @@ function normalizeProfile(profile) {
 function dueSchedules(schedules) {
   const now = new Date();
   const current = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  const weekdayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+  const weekdayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const englishWeekdayNames = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
   const weekday = weekdayNames[now.getDay()];
+  const englishWeekday = englishWeekdayNames[now.getDay()];
 
   return (schedules || []).filter((item) => {
     const cycle = String(item.cycle || "").toLowerCase();
     if (!item.pending || !item.time || item.time > current) return false;
     if (cycle === "every day" || cycle === "daily" || cycle === "\u6bcf\u5929") return true;
-    return cycle.includes(weekday);
+    return cycle.includes(weekday) || cycle.includes(englishWeekday);
   });
 }

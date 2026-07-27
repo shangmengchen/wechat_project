@@ -8,8 +8,8 @@ Page({
     meal: "lunch",
     selected: [],
     users: normalizeUsers(api.mock.users),
-    dishes: api.mock.dishes,
-    history: api.mock.orderHistory
+    dishes: normalizeDishes(api.mock.dishes),
+    history: normalizeOrders(api.mock.orderHistory)
   },
 
   onLoad() {
@@ -37,7 +37,7 @@ Page({
   },
 
   loadOrders() {
-    return api.getOrders().then((res) => this.setData({ history: res.data || res || api.mock.orderHistory }));
+    return api.getOrders().then((res) => this.setData({ history: normalizeOrders(res.data || res || api.mock.orderHistory) }));
   },
 
   loadDishes() {
@@ -73,33 +73,33 @@ Page({
   createOrder() {
     const selectedDishes = this.data.dishes.filter((item) => this.data.selected.includes(item.id));
     if (!selectedDishes.length) {
-      wx.showToast({ title: "Choose at least one dish", icon: "none" });
+      wx.showToast({ title: "请至少选择一道菜", icon: "none" });
       return;
     }
     api.createOrder({
       meal: this.data.meal,
-      picker: `${this.data.users.me.name} picked`,
+      picker: `${this.data.users.me.name} 选的`,
       dishes: selectedDishes.map((item) => item.name)
     }).then((ret) => {
-      const data = ret.data || ret;
+      const data = normalizeOrder(ret.data || ret);
       this.setData({
         selected: [],
         history: [data].concat(this.data.history),
         active: "history"
       }, () => this.setDishes(this.data.dishes));
-      wx.showToast({ title: "Saved", icon: "success" });
+      wx.showToast({ title: "已保存", icon: "success" });
     });
   },
 
   addDish() {
     wx.showModal({
-      title: "Add dish",
+      title: "添加菜品",
       editable: true,
-      placeholderText: "Dish name",
+      placeholderText: "菜品名称",
       success: (res) => {
         const name = (res.content || "").trim();
         if (!res.confirm || !name) return;
-        const dish = { name, icon: "dish", meal: this.data.meal, enabled: true };
+        const dish = { name, icon: "🍽️", meal: this.data.meal, enabled: true };
         api.createDish(dish).then((ret) => {
           const data = ret.data || { ...dish, id: `local-${Date.now()}` };
           this.setDishes([data].concat(this.data.dishes));
@@ -111,8 +111,8 @@ Page({
   deleteDish(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "Delete dish",
-      content: "Delete this dish?",
+      title: "删除菜品",
+      content: "确定删除这个菜品吗？",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteDish(id).then(() => this.setDishes(this.data.dishes.filter((item) => item.id !== id)));
@@ -131,14 +131,31 @@ Page({
 
   setDishes(dishes) {
     this.setData({
-      dishes: (dishes || []).map((dish) => ({
-        ...dish,
-        meal: normalizeMeal(dish.meal),
-        selected: this.data.selected.includes(dish.id)
-      }))
+      dishes: normalizeDishes(dishes, this.data.selected)
     });
   }
 });
+
+function normalizeDishes(dishes, selected = []) {
+  return (dishes || []).map((dish) => ({
+    ...dish,
+    meal: normalizeMeal(dish.meal),
+    mealText: mealText(dish.meal),
+    selected: selected.includes(dish.id)
+  }));
+}
+
+function normalizeOrders(orders) {
+  return (orders || []).map(normalizeOrder);
+}
+
+function normalizeOrder(order) {
+  const item = { ...order };
+  item.meal = normalizeMeal(item.meal);
+  item.mealText = mealText(item.meal);
+  if (item.picker) item.picker = String(item.picker).replace(/\s*picked$/i, " 选的");
+  return item;
+}
 
 function normalizeMeal(meal) {
   const value = String(meal || "").toLowerCase();
@@ -151,6 +168,16 @@ function normalizeMeal(meal) {
   if (value === "\u665a\u9910") return "dinner";
   if (value === "\u901a\u7528") return "any";
   return "any";
+}
+
+function mealText(meal) {
+  const map = {
+    breakfast: "早餐",
+    lunch: "午餐",
+    dinner: "晚餐",
+    any: "通用"
+  };
+  return map[normalizeMeal(meal)] || "通用";
 }
 
 function normalizeUsers(users) {

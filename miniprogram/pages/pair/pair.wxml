@@ -1,22 +1,22 @@
 <view class="pair-page safe-bottom">
   <view class="status-row">
     <text>9:41</text>
-    <text>4G WiFi 100%</text>
+    <text>网络良好 100%</text>
   </view>
 
   <view class="pair-head">
-    <view class="pair-title">Pair Up <text class="heart">♥</text></view>
-    <view class="pair-subtitle">Create your shared space with your partner</view>
+    <view class="pair-title">情侣配对 <text class="heart">♥</text></view>
+    <view class="pair-subtitle">和另一半创建专属的双人空间</view>
   </view>
 
   <view class="seg-card">
-    <view bindtap="generateCode" class="seg {{mode === 'generate' ? 'active' : ''}}">Create code</view>
-    <view bindtap="switchMode" data-mode="input" class="seg {{mode === 'input' ? 'active' : ''}}">Enter code</view>
+    <view bindtap="generateCode" class="seg {{mode === 'generate' ? 'active' : ''}}">{{generatingCode ? '创建中' : '创建分享码'}}</view>
+    <view bindtap="switchMode" data-mode="input" class="seg {{mode === 'input' ? 'active' : ''}}">输入分享码</view>
   </view>
 
   <view wx:if="{{mode === 'input'}}">
     <view class="code-card card">
-      <view class="hint">Enter the 6-digit code from your partner</view>
+      <view class="hint">输入对方发来的 6 位分享码</view>
       <view class="code-boxes">
         <view wx:for="{{[0,1,2,3,4,5]}}" wx:key="*this" class="code-box">{{code[index] || ''}}</view>
       </view>
@@ -26,27 +26,27 @@
       <view wx:for="{{['1','2','3','4','5','6','7','8','9']}}" wx:key="*this" bindtap="tapKey" data-key="{{item}}" class="key">{{item}}</view>
       <view></view>
       <view bindtap="tapKey" data-key="0" class="key">0</view>
-      <view bindtap="deleteKey" class="key delete">Delete</view>
+      <view bindtap="deleteKey" class="key delete">删除</view>
     </view>
 
-    <button bindtap="confirmPair" class="confirm {{code.length === 6 ? 'ready' : ''}}">Confirm pair</button>
+    <button bindtap="confirmPair" class="confirm {{code.length === 6 ? 'ready' : ''}}">确认配对</button>
   </view>
 
   <view wx:else class="share-card card">
     <view class="share-top">
-      <view class="share-label">Send this code to your partner</view>
+      <view class="share-label">把这个分享码发给对方</view>
       <view class="share-badge {{canRegenerate ? 'expired' : 'active'}}">{{shareStatusText}}</view>
     </view>
     <view class="share-code">{{generatedCode}}</view>
     <view class="share-time">{{shareTime}}</view>
     <view class="share-rule">{{shareRuleText}}</view>
     <view class="share-actions">
-      <button open-type="share" class="primary-btn share-action">Share code</button>
+      <button open-type="share" class="primary-btn share-action">分享给对方</button>
       <button bindtap="generateCode" class="secondary-btn share-action {{canRegenerate ? 'ready' : 'disabled'}}" disabled="{{!canRegenerate}}">
         {{regenerateButtonText}}
       </button>
     </view>
   </view>
 
-  <view bindtap="enterDemo" class="skip">Enter demo →</view>
+  <view bindtap="enterDemo" class="skip">先进入体验模式 →</view>
 </view>

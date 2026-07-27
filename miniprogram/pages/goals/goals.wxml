@@ -1,7 +1,7 @@
 <view class="page safe-bottom goals-page">
   <view class="status-row">
     <text>9:41</text>
-    <text>••• WiFi ▪</text>
+    <text>信号满格</text>
   </view>
   <view class="title-row goal-title-row">
     <view bindtap="goBack" class="back-dot blue">‹</view>

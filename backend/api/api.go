@@ -14,6 +14,7 @@ import (
 	"couple-mini/backend/internal/model"
 	"couple-mini/backend/internal/pkg/auth"
 	"couple-mini/backend/internal/pkg/httpmw"
+	"couple-mini/backend/internal/pkg/push"
 	wechatcli "couple-mini/backend/internal/pkg/wechat"
 	"couple-mini/backend/internal/service"
 
@@ -23,12 +24,14 @@ import (
 type API struct {
 	service      *service.Service
 	wechatClient *wechatcli.Client
+	push         *push.Hub
 }
 
-func New(service *service.Service, wechatClient *wechatcli.Client) *API {
+func New(service *service.Service, wechatClient *wechatcli.Client, pushHub *push.Hub) *API {
 	return &API{
 		service:      service,
 		wechatClient: wechatClient,
+		push:         pushHub,
 	}
 }
 
@@ -102,7 +105,14 @@ func (api *API) ConfirmPair(c *gin.Context) {
 		return
 	}
 	couple, err := api.service.ConfirmPair(httpmw.GetCurrentUserID(c), req)
-	respond(c, couple, err)
+	if err != nil {
+		respond(c, couple, err)
+		return
+	}
+	if api.push != nil {
+		api.push.NotifyPairConfirmed(couple)
+	}
+	ok(c, couple)
 }
 
 func (api *API) UpdateLoveDate(c *gin.Context) {

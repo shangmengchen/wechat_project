@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/pair/pair",
+    "pages/pair-success/pair-success",
     "pages/home/home",
     "pages/memory/memory",
     "pages/todos/todos",

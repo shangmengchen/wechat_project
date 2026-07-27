@@ -2,7 +2,7 @@
   <view class="hero">
     <view class="status-row hero-status">
       <text>9:41</text>
-      <text>••• WiFi ▫</text>
+      <text>信号满格</text>
     </view>
     <view class="couple-row">
       <view class="person">

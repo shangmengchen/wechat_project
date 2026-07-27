@@ -1,0 +1,19 @@
+<view class="success-page safe-bottom">
+  <view class="status-row">
+    <text>9:41</text>
+    <text>网络良好 100%</text>
+  </view>
+
+  <view class="success-card">
+    <view class="success-mark">♥</view>
+    <view class="success-title">匹配成功</view>
+    <view class="success-subtitle">你们的双人空间已经开启</view>
+    <view class="success-pair">
+      <view class="success-avatar">你</view>
+      <view class="success-line"></view>
+      <view class="success-avatar dark">TA</view>
+    </view>
+    <view class="success-note">正在进入首页，一起记录接下来的每一天。</view>
+    <button bindtap="goHome" class="success-btn">进入双人首页</button>
+  </view>
+</view>

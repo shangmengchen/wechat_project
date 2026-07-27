@@ -1,7 +1,7 @@
 <view class="page safe-bottom">
   <view class="status-row">
     <text>9:41</text>
-    <text>••• WiFi ▪</text>
+    <text>信号满格</text>
   </view>
   <view class="title-row">
     <view class="page-title">需做列表 <text>✓</text></view>

@@ -47,7 +47,7 @@ Page({
 
   changeLoveDate(e) {
     api.updateLoveDate(e.detail.value).then(() => {
-      wx.showToast({ title: "Updated", icon: "success" });
+      wx.showToast({ title: "已更新", icon: "success" });
       this.load();
     });
   },
@@ -77,7 +77,7 @@ Page({
       const nickname = (profile.nickName || "").trim();
       const avatar = profile.avatarUrl || "";
       if (!nickname && !avatar) {
-        wx.showToast({ title: "No WeChat profile", icon: "none" });
+        wx.showToast({ title: "未获取到微信资料", icon: "none" });
         return;
       }
       Promise.resolve(app.syncUserProfile({ nickname, avatar }))
@@ -91,21 +91,21 @@ Page({
           });
         })
         .then(() => {
-          wx.showToast({ title: "Synced", icon: "success" });
+          wx.showToast({ title: "已同步", icon: "success" });
           this.load();
         });
     };
 
     if (wx.getUserProfile) {
       wx.getUserProfile({
-        desc: "Sync nickname and avatar",
+        desc: "同步昵称和头像",
         success: (res) => applyProfile(res.userInfo || {}),
-        fail: () => wx.showToast({ title: "Auth denied", icon: "none" })
+        fail: () => wx.showToast({ title: "未授权", icon: "none" })
       });
       return;
     }
 
-    wx.showToast({ title: "getUserProfile unsupported", icon: "none" });
+    wx.showToast({ title: "当前微信版本不支持", icon: "none" });
   },
 
   updateProfile(patch) {
@@ -119,10 +119,10 @@ Page({
 
     api.updateUserProfile(me.id, next).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "Update failed", icon: "none" });
+        wx.showToast({ title: ret.message || "更新失败", icon: "none" });
         return;
       }
-      wx.showToast({ title: "Updated", icon: "success" });
+      wx.showToast({ title: "已更新", icon: "success" });
       this.load();
     });
   },

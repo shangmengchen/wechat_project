@@ -27,7 +27,7 @@ function request(path, options = {}) {
           resolve({
             code: 500,
             data: null,
-            message: (error && error.errMsg) || "network request failed"
+            message: (error && error.errMsg) || "网络请求失败"
           });
           return;
         }
@@ -36,10 +36,16 @@ function request(path, options = {}) {
           resolve(data);
           return;
         }
-        resolve({ code: 0, data, message: "mock fallback" });
+        resolve({ code: 0, data, message: "本地模拟数据" });
       }
     });
   }));
+}
+
+function currentUserQuery() {
+  const app = getApp();
+  const userId = app.globalData && app.globalData.currentUserId;
+  return userId ? `?userId=${encodeURIComponent(userId)}` : "";
 }
 
 function uploadImage(filePath) {
@@ -57,7 +63,7 @@ function uploadImage(filePath) {
         try {
           resolve(JSON.parse(res.data));
         } catch (err) {
-          resolve({ code: 500, message: "image upload failed" });
+          resolve({ code: 500, message: "图片上传失败" });
         }
       },
       fail: (error) => {
@@ -65,11 +71,11 @@ function uploadImage(filePath) {
           resolve({
             code: 500,
             data: null,
-            message: (error && error.errMsg) || "image upload failed"
+            message: (error && error.errMsg) || "图片上传失败"
           });
           return;
         }
-        resolve({ code: 0, data: { url: filePath }, message: "mock upload fallback" });
+        resolve({ code: 0, data: { url: filePath }, message: "本地模拟上传" });
       }
     });
   }));
@@ -122,15 +128,24 @@ module.exports = {
   request,
   uploadImage,
   login: (data) => request("/auth/login", { method: "POST", data }),
-  getSyncState: () => request("/sync/state"),
+  getSyncState: () => request(`/sync/state${currentUserQuery()}`),
   generatePairCode: (userId) => request("/pair/code", { method: "POST", data: { userId } }),
-  confirmPair: (data) => request("/pair/confirm", { method: "POST", data }),
+  confirmPair: (data) => {
+    const app = getApp();
+    return request("/pair/confirm", {
+      method: "POST",
+      data: {
+        userId: app.globalData.currentUserId,
+        ...(data || {})
+      }
+    });
+  },
   getDashboard: () => {
     const app = getApp();
     if (shouldUseMockAPI(app) && (app.globalData.demoMode || wx.getStorageSync("demoMode"))) {
       return Promise.resolve({ code: 0, data: { users: mock.users, dashboard: mock.dashboard } });
     }
-    return request("/dashboard");
+    return request(`/dashboard${currentUserQuery()}`);
   },
   updateLoveDate: (loveDate) => request("/couple/love-date", { method: "PATCH", data: { loveDate } }),
   updateUserProfile: (id, data) => request(`/users/${id}/profile`, { method: "PATCH", data }),

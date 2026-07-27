@@ -2,24 +2,24 @@
   <view class="profile-hero">
     <view class="status-row hero-status">
       <text>9:41</text>
-      <text>WiFi</text>
+      <text>信号满格</text>
     </view>
-    <view class="page-title mine-title">Profile</view>
+    <view class="page-title mine-title">我的资料</view>
     <view class="profile-row">
       <image wx:if="{{users.me.avatar}}" class="avatar-image big" src="{{users.me.avatar}}" mode="aspectFill"></image>
       <view wx:else class="avatar big">{{users.me.avatarText}}</view>
-      <view class="edit-dot">E</view>
+      <view class="edit-dot">改</view>
       <view class="profile-text">
         <view class="name">{{users.me.name}}</view>
-        <view class="line">Birthday: {{users.me.birthday}}</view>
-        <view class="line">WeChat ID: {{users.me.wxid}}</view>
+        <view class="line">生日：{{users.me.birthday}}</view>
+        <view class="line">微信号：{{users.me.wxid}}</view>
       </view>
     </view>
   </view>
 
   <view class="mine-content">
     <view class="relation-card card">
-      <view class="relation-title">Relationship</view>
+      <view class="relation-title">情侣关系</view>
       <view class="relation-row">
         <view class="mini-person">
           <image wx:if="{{users.me.avatar}}" class="avatar-image small" src="{{users.me.avatar}}" mode="aspectFill"></image>
@@ -28,7 +28,7 @@
         </view>
         <view class="relation-days">
           <view>{{dashboard.loveDays}}</view>
-          <text>days</text>
+          <text>天</text>
           <view class="date">{{dashboard.since}}</view>
         </view>
         <view class="mini-person">
@@ -39,27 +39,27 @@
       </view>
     </view>
 
-    <view class="section-title">Settings</view>
+    <view class="section-title">资料设置</view>
     <view class="setting-card card">
       <picker mode="date" value="{{dashboard.since}}" bindchange="changeLoveDate">
-        <view class="setting-row"><text>Love date</text><text>{{dashboard.since}} ></text></view>
+        <view class="setting-row"><text>恋爱日期</text><text>{{dashboard.since}} ></text></view>
       </picker>
       <picker mode="date" value="{{birthdayValue}}" bindchange="changeBirthday">
-        <view class="setting-row"><text>Birthday</text><text>{{users.me.birthday}} ></text></view>
+        <view class="setting-row"><text>生日</text><text>{{users.me.birthday}} ></text></view>
       </picker>
       <view class="form-block">
-        <view class="form-label">Nickname</view>
-        <input class="form-input" value="{{profileForm.nickname}}" placeholder="Input nickname" bindinput="changeNickname" />
+        <view class="form-label">昵称</view>
+        <input class="form-input" value="{{profileForm.nickname}}" placeholder="请输入昵称" bindinput="changeNickname" />
       </view>
       <view class="form-block">
-        <view class="form-label">WeChat ID</view>
-        <input class="form-input" value="{{profileForm.wxid}}" placeholder="Input WeChat ID" bindinput="changeWxid" />
+        <view class="form-label">微信号</view>
+        <input class="form-input" value="{{profileForm.wxid}}" placeholder="请输入微信号" bindinput="changeWxid" />
       </view>
       <view class="profile-actions">
-        <button bindtap="saveProfile" class="save-btn">Save Profile</button>
-        <button bindtap="syncWechatProfile" class="sync-btn">Sync WeChat Profile</button>
+        <button bindtap="saveProfile" class="save-btn">保存资料</button>
+        <button bindtap="syncWechatProfile" class="sync-btn">同步微信资料</button>
       </view>
-      <view class="setting-row"><text>Notifications</text><text>On</text></view>
+      <view class="setting-row"><text>通知提醒</text><text>已开启</text></view>
     </view>
   </view>
 </view>

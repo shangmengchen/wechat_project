@@ -6,9 +6,9 @@ Page({
   data: {
     active: "feed",
     tabs: [
-      { key: "feed", text: "Feed" },
-      { key: "timeline", text: "Timeline" },
-      { key: "dates", text: "Dates" }
+      { key: "feed", text: "动态" },
+      { key: "timeline", text: "时间线" },
+      { key: "dates", text: "纪念日" }
     ],
     users: normalizeUsers(api.mock.users),
     moments: api.mock.moments,
@@ -74,7 +74,7 @@ Page({
           this.setData({ "momentDraft.image": data.url || filePath });
           return;
         }
-        wx.showToast({ title: ret.message || "Upload failed", icon: "none" });
+        wx.showToast({ title: ret.message || "上传失败", icon: "none" });
       });
     });
   },
@@ -86,22 +86,22 @@ Page({
   submitMoment() {
     const content = (this.data.momentDraft.content || "").trim();
     if (!content) {
-      wx.showToast({ title: "Content required", icon: "none" });
+      wx.showToast({ title: "请输入内容", icon: "none" });
       return;
     }
     const moment = {
       author: this.data.users.me.name,
       avatar: this.data.users.me.avatarText,
-      tag: "Daily",
+      tag: "日常记录",
       content,
       image: this.data.momentDraft.image
     };
     api.createMoment(moment).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "Publish failed", icon: "none" });
+        wx.showToast({ title: ret.message || "发布失败", icon: "none" });
         return;
       }
-      const data = ret.data || ret || { ...moment, id: `local-${Date.now()}`, time: "just now", liked: false };
+      const data = ret.data || ret || { ...moment, id: `local-${Date.now()}`, time: "刚刚", liked: false };
       this.setData({
         moments: [data].concat(this.data.moments),
         showComposer: false,
@@ -113,8 +113,8 @@ Page({
   deleteMoment(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "Delete post",
-      content: "Delete this memory?",
+      title: "删除动态",
+      content: "确定删除这条纪念动态吗？",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteMoment(id).then(() => {

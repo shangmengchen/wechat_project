@@ -7,6 +7,7 @@ import (
 	"couple-mini/backend/configs"
 	"couple-mini/backend/internal/model"
 	"couple-mini/backend/internal/pkg/httpmw"
+	"couple-mini/backend/internal/pkg/push"
 	wechatcli "couple-mini/backend/internal/pkg/wechat"
 	"couple-mini/backend/internal/service"
 
@@ -19,7 +20,8 @@ func SetRouter(svc *service.Service) *gin.Engine {
 		gin.SetMode(cfg.AppConfig.RunMode)
 	}
 
-	handler := api.New(svc, wechatcli.NewClient(cfg.WeChatConfig.AppID, cfg.WeChatConfig.Secret))
+	pushHub := push.NewHub()
+	handler := api.New(svc, wechatcli.NewClient(cfg.WeChatConfig.AppID, cfg.WeChatConfig.Secret), pushHub)
 	r := gin.New()
 	_ = r.SetTrustedProxies(nil)
 	r.Use(httpmw.RequestID(), httpmw.AccessLog(), httpmw.Recovery(), cors())
@@ -30,6 +32,7 @@ func SetRouter(svc *service.Service) *gin.Engine {
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/auth/login", handler.Login)
+		v1.GET("/events", handler.PairEvents)
 		authV1 := v1.Group("")
 		authV1.Use(httpmw.RequireAuth())
 		authV1.GET("/sync/state", handler.SyncState)

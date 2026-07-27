@@ -8,15 +8,15 @@ Page({
   data: {
     active: "todo",
     tabs: [
-      { key: "todo", text: "Todo", count: 0 },
-      { key: "review", text: "Review", count: 0 },
-      { key: "done", text: "Done", count: 0 }
+      { key: "todo", text: "待完成", count: 0 },
+      { key: "review", text: "待确认", count: 0 },
+      { key: "done", text: "已完成", count: 0 }
     ],
     users: normalizeUsers(api.mock.users),
     tasks: api.mock.todos,
     showTaskForm: false,
-    typeOptions: ["one-time", "monthly", "yearly"],
-    ownerOptions: ["both", api.mock.users.me.name, api.mock.users.partner.name, "custom"],
+    typeOptions: ["一次性", "每月", "每年"],
+    ownerOptions: ["双方", api.mock.users.me.name, api.mock.users.partner.name, "自定义"],
     typeIndex: 0,
     ownerIndex: 0,
     taskForm: {
@@ -48,10 +48,10 @@ Page({
       const users = normalizeUsers(data.users || api.mock.users);
       this.setData({
         users,
-        ownerOptions: ["both", users.me.name, users.partner.name, "custom"]
+        ownerOptions: ["双方", users.me.name, users.partner.name, "自定义"]
       });
     });
-    return api.getTasks().then((res) => this.setData({ tasks: res.data || res || api.mock.todos }, this.refreshCounts));
+    return api.getTasks().then((res) => this.setData({ tasks: normalizeTasks(res.data || res || api.mock.todos) }, this.refreshCounts));
   },
 
   switchTab(e) {
@@ -114,18 +114,18 @@ Page({
     const form = this.data.taskForm;
     const title = (form.title || "").trim();
     if (!title) {
-      wx.showToast({ title: "Task title required", icon: "none" });
+      wx.showToast({ title: "请输入任务内容", icon: "none" });
       return;
     }
     const ownerOption = this.data.ownerOptions[this.data.ownerIndex];
-    const owner = ownerOption === "custom" ? (form.ownerCustom || "").trim() : ownerOption;
+    const owner = ownerOption === "自定义" ? (form.ownerCustom || "").trim() : ownerOption;
     if (!owner) {
-      wx.showToast({ title: "Owner required", icon: "none" });
+      wx.showToast({ title: "请输入负责人", icon: "none" });
       return;
     }
     const task = {
       title,
-      tag: (form.tag || "life").trim(),
+      tag: (form.tag || "生活").trim(),
       owner,
       type: this.data.typeOptions[this.data.typeIndex],
       due: form.due,
@@ -133,10 +133,10 @@ Page({
     };
     api.createTask(task).then((ret) => {
       if (ret && ret.code !== undefined && ret.code !== 0) {
-        wx.showToast({ title: ret.message || "Create failed", icon: "none" });
+        wx.showToast({ title: ret.message || "创建失败", icon: "none" });
         return;
       }
-      const data = ret.data || { ...task, id: `local-${Date.now()}`, status: "todo" };
+      const data = normalizeTask(ret.data || { ...task, id: `local-${Date.now()}`, status: "todo" });
       this.setData({ tasks: [data].concat(this.data.tasks), showTaskForm: false }, this.refreshCounts);
     });
   },
@@ -144,8 +144,8 @@ Page({
   deleteTask(e) {
     const id = e.currentTarget.dataset.id;
     wx.showModal({
-      title: "Delete task",
-      content: "Delete this task?",
+      title: "删除任务",
+      content: "确定删除这个任务吗？",
       success: (res) => {
         if (!res.confirm) return;
         api.deleteTask(id).then(() => {
@@ -157,7 +157,7 @@ Page({
 
   updateTask(id, data) {
     this.setData({
-      tasks: this.data.tasks.map((item) => (item.id === id ? { ...item, ...data } : item))
+      tasks: this.data.tasks.map((item) => (item.id === id ? normalizeTask({ ...item, ...data }) : item))
     }, this.refreshCounts);
   },
 
@@ -178,6 +178,32 @@ function normalizeUsers(users) {
     me: normalizeUser(next.me || api.mock.users.me),
     partner: normalizeUser(next.partner || api.mock.users.partner)
   };
+}
+
+function normalizeTasks(tasks) {
+  return (tasks || []).map(normalizeTask);
+}
+
+function normalizeTask(task) {
+  const item = { ...task };
+  item.owner = textMap(item.owner, {
+    both: "双方",
+    custom: "自定义"
+  });
+  item.type = textMap(item.type, {
+    "one-time": "一次性",
+    monthly: "每月",
+    yearly: "每年",
+    daily: "每日",
+    life: "生活"
+  });
+  item.tag = textMap(item.tag, { life: "生活" });
+  return item;
+}
+
+function textMap(value, map) {
+  const text = String(value || "");
+  return map[text.toLowerCase()] || text;
 }
 
 function normalizeUser(user) {

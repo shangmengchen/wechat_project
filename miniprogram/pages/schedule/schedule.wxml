@@ -1,50 +1,50 @@
 <view class="page safe-bottom schedule-page">
   <view class="status-row">
     <text>9:41</text>
-    <text>4G WiFi 100%</text>
+    <text>网络良好 100%</text>
   </view>
   <view class="title-row">
     <view bindtap="goBack" class="back-dot">‹</view>
-    <view class="page-title">Scheduled Tasks <text>•</text></view>
+    <view class="page-title">定时任务 <text>•</text></view>
     <view bindtap="addSchedule" class="add-mini">+</view>
   </view>
 
   <view wx:if="{{showScheduleForm}}" class="schedule-form card">
-    <input bindinput="changeScheduleTitle" value="{{scheduleForm.title}}" class="schedule-input" placeholder="Example: take out trash" />
+    <input bindinput="changeScheduleTitle" value="{{scheduleForm.title}}" class="schedule-input" placeholder="例如：倒垃圾" />
     <picker range="{{cycleOptions}}" value="{{cycleIndex}}" bindchange="changeCycle">
       <view class="schedule-form-row">
-        <text>Cycle</text>
+        <text>周期</text>
         <text>{{cycleOptions[cycleIndex]}}</text>
       </view>
     </picker>
     <picker mode="time" value="{{scheduleForm.time}}" bindchange="changeScheduleTime">
       <view class="schedule-form-row">
-        <text>Reminder time</text>
+        <text>提醒时间</text>
         <text>{{scheduleForm.time}}</text>
       </view>
     </picker>
     <picker range="{{assigneeOptions}}" value="{{assigneeIndex}}" bindchange="changeAssignee">
       <view class="schedule-form-row">
-        <text>Assignee</text>
+        <text>负责人</text>
         <text>{{assigneeOptions[assigneeIndex]}}</text>
       </view>
     </picker>
-    <input wx:if="{{assigneeOptions[assigneeIndex] === 'Custom'}}" bindinput="changeAssigneeCustom" value="{{scheduleForm.assigneeCustom}}" class="schedule-input" placeholder="Custom assignee" />
+    <input wx:if="{{assigneeOptions[assigneeIndex] === '自定义'}}" bindinput="changeAssigneeCustom" value="{{scheduleForm.assigneeCustom}}" class="schedule-input" placeholder="自定义负责人" />
     <view class="schedule-form-actions">
-      <button bindtap="closeScheduleForm" class="schedule-cancel">Cancel</button>
-      <button bindtap="submitSchedule" class="schedule-save">Save</button>
+      <button bindtap="closeScheduleForm" class="schedule-cancel">取消</button>
+      <button bindtap="submitSchedule" class="schedule-save">保存</button>
     </view>
   </view>
 
   <view class="pill-tabs">
-    <view bindtap="switchTab" data-key="pending" class="pill-tab {{active === 'pending' ? 'active-yellow' : ''}}">Pending</view>
-    <view bindtap="switchTab" data-key="all" class="pill-tab {{active === 'all' ? 'active-yellow' : ''}}">All</view>
+    <view bindtap="switchTab" data-key="pending" class="pill-tab {{active === 'pending' ? 'active-yellow' : ''}}">待完成</view>
+    <view bindtap="switchTab" data-key="all" class="pill-tab {{active === 'all' ? 'active-yellow' : ''}}">全部</view>
   </view>
 
   <view wx:if="{{active === 'pending'}}" class="notice">
     <view class="notice-icon">•</view>
     <view>
-      <view class="notice-title">Today’s pending reminders</view>
+      <view class="notice-title">今天待处理的提醒</view>
       <view class="notice-text">{{noticeText}}</view>
     </view>
   </view>
@@ -60,11 +60,11 @@
             <text class="tag">{{item.assignee}}</text>
             <text class="tag">{{item.time}}</text>
           </view>
-          <view class="next">Next reminder: <text>{{item.next}}</text></view>
+          <view class="next">下次提醒：<text>{{item.next}}</text></view>
         </view>
         <view bindtap="deleteSchedule" data-id="{{item.id}}" class="delete-dot">×</view>
       </view>
-      <button wx:if="{{item.pending}}" bindtap="confirm" data-id="{{item.id}}" class="yellow-btn">Confirm done</button>
+      <button wx:if="{{item.pending}}" bindtap="confirm" data-id="{{item.id}}" class="yellow-btn">确认完成</button>
     </view>
   </block>
 </view>
