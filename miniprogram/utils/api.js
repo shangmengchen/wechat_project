@@ -102,6 +102,7 @@ function fallback(path, data = {}) {
     return { code: 0, data: { initiatorId: data.userId || "" }, message: "已解除绑定" };
   }
   if (path.includes("/couple/love-date")) return mock.updateLoveDate(data.loveDate);
+  if (path.includes("/subscribe/templates")) return { code: 0, data: { notice: "", schedule: "" } };
   if (path.includes("/notices/unread")) return { code: 0, data: { items: [], counts: {} } };
   if (path.includes("/notices/read")) return { code: 0, data: { read: true } };
   if (path.includes("/users/") && path.includes("/profile")) {
@@ -160,6 +161,7 @@ module.exports = {
   },
   updateLoveDate: (loveDate) => request("/couple/love-date", { method: "PATCH", data: { loveDate } }),
   updateUserProfile: (id, data) => request(`/users/${id}/profile`, { method: "PATCH", data }),
+  getSubscribeTemplates: () => request("/subscribe/templates"),
   getUnreadNotices: () => request("/notices/unread"),
   markNoticesRead: (categories = []) => request("/notices/read", { method: "POST", data: { categories } }),
   getMoments: () => request("/moments"),

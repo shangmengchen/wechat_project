@@ -1,5 +1,6 @@
 const NOTICE_STORAGE_KEY = "unreadNotices";
 const REMINDER_INTERVAL = 60 * 1000;
+const REMINDER_TICK_OFFSET = 500;
 
 App({
   globalData: {
@@ -210,6 +211,9 @@ App({
     const notice = normalizeNotice(data);
     const currentUserId = this.globalData.currentUserId || wx.getStorageSync("currentUserId");
     if (!notice.category || (notice.initiatorId && notice.initiatorId === currentUserId)) {
+      return;
+    }
+    if (notice.recipientId && notice.recipientId !== currentUserId) {
       return;
     }
 
@@ -438,29 +442,39 @@ App({
 
   startReminderPolling() {
     this.stopReminderPolling();
-    this.reminderTimer = setInterval(() => {
-      this.checkScheduleReminders();
-    }, REMINDER_INTERVAL);
+    this.scheduleNextReminderTick();
   },
 
   stopReminderPolling() {
     if (!this.reminderTimer) return;
-    clearInterval(this.reminderTimer);
+    clearTimeout(this.reminderTimer);
     this.reminderTimer = null;
   },
 
-  checkScheduleReminders() {
+  scheduleNextReminderTick() {
+    const now = new Date();
+    const delay = Math.max(
+      500,
+      REMINDER_INTERVAL - (now.getSeconds() * 1000 + now.getMilliseconds()) + REMINDER_TICK_OFFSET
+    );
+    this.reminderTimer = setTimeout(() => {
+      this.reminderTimer = null;
+      this.checkScheduleReminders({ catchUp: false });
+      this.scheduleNextReminderTick();
+    }, delay);
+  },
+
+  checkScheduleReminders(options = {}) {
     if (!this.globalData.demoMode && !this.globalData.isPaired) return;
     const api = require("./utils/api");
     api.getSchedules().then((res) => {
       const schedules = res.data || res || [];
-      const due = dueSchedules(schedules);
+      const due = dueSchedules(schedules, options);
       if (!due.length) return;
       const today = new Date().toISOString().slice(0, 10);
       const key = `scheduleReminder:${today}:${due.map((item) => item.id).join(",")}`;
       if (wx.getStorageSync(key)) return;
       wx.setStorageSync(key, true);
-      this.addUnreadNotice("schedule");
       wx.showModal({
         title: "定时任务提醒",
         content: due.length > 1 ? `${due[0].title} 等 ${due.length} 个任务到时间啦` : `${due[0].title} 到时间啦`,
@@ -486,6 +500,7 @@ function normalizeProfile(profile) {
 function normalizeNotice(data = {}) {
   return {
     id: data.id || "",
+    recipientId: data.recipientId || "",
     initiatorId: data.initiatorId || "",
     category: normalizeCategory(data.category),
     title: data.title || "新的提醒",
@@ -566,7 +581,8 @@ function navigateToNoticeTarget(url) {
   });
 }
 
-function dueSchedules(schedules) {
+function dueSchedules(schedules, options = {}) {
+  const catchUp = options.catchUp !== false;
   const now = new Date();
   const current = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   const weekdayNames = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -576,7 +592,8 @@ function dueSchedules(schedules) {
 
   return (schedules || []).filter((item) => {
     const cycle = String(item.cycle || "").toLowerCase();
-    if (!item.pending || !item.time || item.time > current) return false;
+    if (!item.pending || !item.time) return false;
+    if (catchUp ? item.time > current : item.time !== current) return false;
     if (cycle === "every day" || cycle === "daily" || cycle === "每天") return true;
     return cycle.includes(weekday) || cycle.includes(englishWeekday);
   });

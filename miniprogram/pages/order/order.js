@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 const pageSync = require("../../utils/pageSync");
+const subscribe = require("../../utils/subscribe");
 
 Page({
   data: {
@@ -81,6 +82,7 @@ Page({
   },
 
   createOrder() {
+    subscribe.request("notice");
     const selectedDishes = this.data.dishes.filter((item) => this.data.selected.includes(item.id));
     if (!selectedDishes.length) {
       wx.showToast({ title: "请至少选择一道菜", icon: "none" });
@@ -102,6 +104,7 @@ Page({
   },
 
   addDish() {
+    subscribe.request("notice");
     wx.showModal({
       title: "添加菜品",
       editable: true,

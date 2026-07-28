@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 const pageSync = require("../../utils/pageSync");
+const subscribe = require("../../utils/subscribe");
 
 Page({
   data: {
@@ -88,6 +89,7 @@ Page({
   },
 
   submitMoment() {
+    subscribe.request("notice");
     const content = (this.data.momentDraft.content || "").trim();
     if (!content) {
       wx.showToast({ title: "请输入内容", icon: "none" });

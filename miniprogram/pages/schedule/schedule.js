@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 const pageSync = require("../../utils/pageSync");
+const subscribe = require("../../utils/subscribe");
 
 const cycleOptions = ["每天", "周一", "周二", "周三", "周四", "周五", "周六", "周日"];
 
@@ -35,7 +36,6 @@ Page({
       app.clearUnreadCategory("schedule");
     }
     this.load();
-    this.checkDueReminders();
   },
 
   onUnload() {
@@ -103,6 +103,7 @@ Page({
   },
 
   submitSchedule() {
+    subscribe.request("schedule");
     const form = this.data.scheduleForm;
     const title = (form.title || "").trim();
     if (!title) {

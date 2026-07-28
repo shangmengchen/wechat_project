@@ -37,6 +37,14 @@ func (s *MySQLStore) CoupleForUser(userID string) (domain.Couple, error) {
 	return s.coupleForUser(userID)
 }
 
+func (s *MySQLStore) UserByID(userID string) (domain.User, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return domain.User{}, ErrUnauthorized
+	}
+	return s.user(userID)
+}
+
 func (s *MySQLStore) AddNotice(notice domain.Notice) (domain.Notice, error) {
 	now := time.Now()
 	row := noticeModel{

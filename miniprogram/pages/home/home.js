@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 const pageSync = require("../../utils/pageSync");
+const subscribe = require("../../utils/subscribe");
 
 Page({
   data: {
@@ -51,6 +52,7 @@ Page({
     const url = e.currentTarget.dataset.url;
     if (!url) return;
     this.clearUnreadByURL(url);
+    subscribe.request(url.includes("/schedule/") ? "schedule" : "notice");
     const tabPages = ["/pages/home/home", "/pages/memory/memory", "/pages/todos/todos", "/pages/mine/mine"];
     if (tabPages.includes(url)) {
       wx.switchTab({ url });

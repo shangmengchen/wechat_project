@@ -33,6 +33,10 @@ func (r *Repo) Login(userID, openid, nickname, avatar string) (model.User, error
 	return r.store.Login(userID, openid, nickname, avatar)
 }
 
+func (r *Repo) UserByID(userID string) (model.User, error) {
+	return r.store.UserByID(userID)
+}
+
 func (r *Repo) SyncState(userID string) (model.SyncState, error) {
 	return r.store.SyncState(userID)
 }

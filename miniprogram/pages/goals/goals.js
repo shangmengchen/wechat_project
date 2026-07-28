@@ -1,6 +1,7 @@
 const api = require("../../utils/api");
 const session = require("../../utils/session");
 const pageSync = require("../../utils/pageSync");
+const subscribe = require("../../utils/subscribe");
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -100,6 +101,7 @@ Page({
   },
 
   submitGoal() {
+    subscribe.request("notice");
     const form = this.data.goalForm;
     const title = (form.title || "").trim();
     const targetValue = Number(form.targetValue);

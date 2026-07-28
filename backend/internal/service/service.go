@@ -8,6 +8,7 @@ import (
 
 type Repository interface {
 	Login(userID, openid, nickname, avatar string) (model.User, error)
+	UserByID(userID string) (model.User, error)
 	SyncState(userID string) (model.SyncState, error)
 	CoupleForUser(userID string) (model.Couple, error)
 	GeneratePairCode(userID string) (model.Couple, error)
@@ -58,6 +59,10 @@ func New(repo Repository) *Service {
 
 func (s *Service) Login(req *LoginRequest) (model.User, error) {
 	return s.repo.Login(req.UserID, req.OpenID, req.Nickname, req.Avatar)
+}
+
+func (s *Service) UserByID(userID string) (model.User, error) {
+	return s.repo.UserByID(userID)
 }
 
 func (s *Service) SyncState(userID string) (model.SyncState, error) {

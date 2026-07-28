@@ -11,11 +11,11 @@ import (
 )
 
 type GlobalConfig struct {
-	AppConfig   AppConfig   `yaml:"app"`
-	DbConfig    DbConfig    `yaml:"db"`
-	LogConfig   LogConfig   `yaml:"log"`
-	AdminConfig AdminConfig `yaml:"admin"`
-	AuthConfig  AuthConfig  `yaml:"auth"`
+	AppConfig    AppConfig    `yaml:"app"`
+	DbConfig     DbConfig     `yaml:"db"`
+	LogConfig    LogConfig    `yaml:"log"`
+	AdminConfig  AdminConfig  `yaml:"admin"`
+	AuthConfig   AuthConfig   `yaml:"auth"`
 	WeChatConfig WeChatConfig `yaml:"wechat"`
 }
 
@@ -68,8 +68,13 @@ type AuthConfig struct {
 }
 
 type WeChatConfig struct {
-	AppID  string `yaml:"app_id"`
-	Secret string `yaml:"secret"`
+	AppID                       string `yaml:"app_id"`
+	Secret                      string `yaml:"secret"`
+	SubscribeNoticeTemplateID   string `yaml:"subscribe_notice_template_id"`
+	SubscribeScheduleTemplateID string `yaml:"subscribe_schedule_template_id"`
+	SubscribeTitleKey           string `yaml:"subscribe_title_key"`
+	SubscribeContentKey         string `yaml:"subscribe_content_key"`
+	SubscribePage               string `yaml:"subscribe_page"`
 }
 
 var (
@@ -137,8 +142,13 @@ func defaultConfig() GlobalConfig {
 			TokenTTLHours: 168,
 		},
 		WeChatConfig: WeChatConfig{
-			AppID:  "",
-			Secret: "",
+			AppID:                       "",
+			Secret:                      "",
+			SubscribeNoticeTemplateID:   "",
+			SubscribeScheduleTemplateID: "",
+			SubscribeTitleKey:           "thing1",
+			SubscribeContentKey:         "thing2",
+			SubscribePage:               "pages/home/home",
 		},
 	}
 }
@@ -278,6 +288,21 @@ func overrideFromEnv(cfg *GlobalConfig) {
 	}
 	if value := os.Getenv("WECHAT_SECRET"); value != "" || hasEnv("WECHAT_SECRET") {
 		cfg.WeChatConfig.Secret = value
+	}
+	if value := os.Getenv("WECHAT_SUBSCRIBE_NOTICE_TEMPLATE_ID"); value != "" {
+		cfg.WeChatConfig.SubscribeNoticeTemplateID = value
+	}
+	if value := os.Getenv("WECHAT_SUBSCRIBE_SCHEDULE_TEMPLATE_ID"); value != "" {
+		cfg.WeChatConfig.SubscribeScheduleTemplateID = value
+	}
+	if value := os.Getenv("WECHAT_SUBSCRIBE_TITLE_KEY"); value != "" {
+		cfg.WeChatConfig.SubscribeTitleKey = value
+	}
+	if value := os.Getenv("WECHAT_SUBSCRIBE_CONTENT_KEY"); value != "" {
+		cfg.WeChatConfig.SubscribeContentKey = value
+	}
+	if value := os.Getenv("WECHAT_SUBSCRIBE_PAGE"); value != "" {
+		cfg.WeChatConfig.SubscribePage = value
 	}
 }
 

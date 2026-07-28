@@ -43,6 +43,7 @@ func SetRouter(svc *service.Service) *gin.Engine {
 		authV1.PATCH("/users/:id/profile", handler.UpdateUserProfile)
 		authV1.GET("/dashboard", handler.Dashboard)
 		authV1.POST("/uploads/images", handler.UploadImage)
+		authV1.GET("/subscribe/templates", handler.SubscribeTemplates)
 		authV1.GET("/notices/unread", handler.UnreadNotices)
 		authV1.POST("/notices/read", handler.MarkNoticesRead)
 

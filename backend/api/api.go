@@ -189,6 +189,14 @@ func (api *API) UploadImage(c *gin.Context) {
 	ok(c, gin.H{"url": absoluteURL(c, relative)})
 }
 
+func (api *API) SubscribeTemplates(c *gin.Context) {
+	cfg := configs.GetGlobalConfig().WeChatConfig
+	ok(c, gin.H{
+		"notice":   strings.TrimSpace(cfg.SubscribeNoticeTemplateID),
+		"schedule": strings.TrimSpace(cfg.SubscribeScheduleTemplateID),
+	})
+}
+
 func (api *API) Moments(c *gin.Context) {
 	data, err := api.service.Moments(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
@@ -537,6 +545,52 @@ func (api *API) notifyPartner(userID, category, title, content, target string) {
 	if api.push != nil {
 		api.push.NotifyNotice(notice)
 	}
+	go api.sendWeChatSubscribeNotice(notice)
+}
+
+func (api *API) sendWeChatSubscribeNotice(notice model.Notice) {
+	if api == nil || api.wechatClient == nil || !api.wechatClient.Enabled() {
+		return
+	}
+	cfg := configs.GetGlobalConfig().WeChatConfig
+	templateID := subscribeTemplateID(cfg, notice.Category)
+	if strings.TrimSpace(templateID) == "" {
+		return
+	}
+	recipient, err := api.service.UserByID(notice.RecipientID)
+	if err != nil || strings.TrimSpace(recipient.OpenID) == "" {
+		return
+	}
+	titleKey := firstNonEmpty(strings.TrimSpace(cfg.SubscribeTitleKey), "thing1")
+	contentKey := firstNonEmpty(strings.TrimSpace(cfg.SubscribeContentKey), "thing2")
+	page := firstNonEmpty(strings.TrimSpace(notice.Target), strings.TrimSpace(cfg.SubscribePage), "pages/home/home")
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Second)
+	defer cancel()
+	_ = api.wechatClient.SendSubscribeMessage(ctx, wechatcli.SubscribeMessage{
+		ToUser:     recipient.OpenID,
+		TemplateID: templateID,
+		Page:       page,
+		Data: map[string]string{
+			titleKey:   truncateRunes(notice.Title, 20),
+			contentKey: truncateRunes(notice.Content, 20),
+		},
+	})
+}
+
+func subscribeTemplateID(cfg configs.WeChatConfig, category string) string {
+	if normalizeNoticeCategory(category) == "schedule" && strings.TrimSpace(cfg.SubscribeScheduleTemplateID) != "" {
+		return cfg.SubscribeScheduleTemplateID
+	}
+	return cfg.SubscribeNoticeTemplateID
+}
+
+func normalizeNoticeCategory(category string) string {
+	switch strings.ToLower(strings.TrimSpace(category)) {
+	case "schedule", "scheduledtask":
+		return "schedule"
+	default:
+		return strings.ToLower(strings.TrimSpace(category))
+	}
 }
 
 func noticeCounts(items []model.Notice) map[string]int {
@@ -561,6 +615,23 @@ func previewText(value, fallback string) string {
 		return string(runes[:32]) + "..."
 	}
 	return text
+}
+
+func truncateRunes(value string, max int) string {
+	runes := []rune(strings.TrimSpace(value))
+	if len(runes) <= max {
+		return string(runes)
+	}
+	return string(runes[:max])
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return value
+		}
+	}
+	return ""
 }
 
 func scheduledNoticeContent(task model.ScheduledTask) string {
