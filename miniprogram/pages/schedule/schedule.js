@@ -30,6 +30,10 @@ Page({
 
   onShow() {
     if (!session.guardCouplePage()) return;
+    const app = getApp();
+    if (app && typeof app.clearUnreadCategory === "function") {
+      app.clearUnreadCategory("schedule");
+    }
     this.load();
     this.checkDueReminders();
   },
@@ -151,9 +155,10 @@ Page({
     if (wx.getStorageSync(key)) return;
     wx.setStorageSync(key, true);
     wx.showModal({
-      title: "定时提醒",
-      content: `${due[0].title} 到时间啦`,
-      showCancel: false
+      title: "定时任务提醒",
+      content: due.length > 1 ? `${due[0].title} 等 ${due.length} 个任务到时间啦` : `${due[0].title} 到时间啦`,
+      showCancel: false,
+      confirmText: "知道了"
     });
   },
 

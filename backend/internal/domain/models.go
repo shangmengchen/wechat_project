@@ -22,6 +22,11 @@ type Couple struct {
 	CreatedAt    time.Time `json:"createdAt"`
 }
 
+type UnpairResult struct {
+	Couple      Couple `json:"couple"`
+	InitiatorID string `json:"initiatorId"`
+}
+
 type Anniversary struct {
 	Icon  string `json:"icon"`
 	Title string `json:"title"`
@@ -122,6 +127,19 @@ type Goal struct {
 	TimeProgress int    `json:"timeProgress"`
 	RemainDays   int    `json:"remainDays"`
 	Status       string `json:"status"`
+}
+
+type Notice struct {
+	ID          string     `json:"id"`
+	CoupleID    string     `json:"coupleId"`
+	RecipientID string     `json:"recipientId"`
+	InitiatorID string     `json:"initiatorId"`
+	Category    string     `json:"category"`
+	Title       string     `json:"title"`
+	Content     string     `json:"content"`
+	Target      string     `json:"target"`
+	ReadAt      *time.Time `json:"readAt,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
 }
 
 type MePayload struct {

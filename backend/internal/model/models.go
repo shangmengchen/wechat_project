@@ -4,6 +4,7 @@ import "couple-mini/backend/internal/domain"
 
 type User = domain.User
 type Couple = domain.Couple
+type UnpairResult = domain.UnpairResult
 type Anniversary = domain.Anniversary
 type Stat = domain.Stat
 type Dashboard = domain.Dashboard
@@ -14,6 +15,7 @@ type ScheduledTask = domain.ScheduledTask
 type Dish = domain.Dish
 type Order = domain.Order
 type Goal = domain.Goal
+type Notice = domain.Notice
 type MePayload = domain.MePayload
 type DashboardPayload = domain.DashboardPayload
 type UserLite = domain.UserLite

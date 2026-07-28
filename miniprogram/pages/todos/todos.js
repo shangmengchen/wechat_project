@@ -35,6 +35,10 @@ Page({
 
   onShow() {
     if (!session.guardCouplePage()) return;
+    const app = getApp();
+    if (app && typeof app.clearUnreadCategory === "function") {
+      app.clearUnreadCategory("todos");
+    }
     this.load();
   },
 

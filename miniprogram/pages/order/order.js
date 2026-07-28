@@ -20,11 +20,21 @@ Page({
 
   onShow() {
     if (!session.guardCouplePage()) return;
+    const app = getApp();
+    if (app && typeof app.clearUnreadCategory === "function") {
+      app.clearUnreadCategory("order");
+    }
     this.load();
   },
 
   onUnload() {
     pageSync.unregisterPageRefresh(this);
+  },
+
+  goBack() {
+    wx.navigateBack({
+      fail: () => wx.switchTab({ url: "/pages/home/home" })
+    });
   },
 
   load() {
@@ -99,7 +109,7 @@ Page({
       success: (res) => {
         const name = (res.content || "").trim();
         if (!res.confirm || !name) return;
-        const dish = { name, icon: "🍽️", meal: this.data.meal, enabled: true };
+        const dish = { name, icon: "🥗", meal: this.data.meal, enabled: true };
         api.createDish(dish).then((ret) => {
           const data = ret.data || { ...dish, id: `local-${Date.now()}` };
           this.setDishes([data].concat(this.data.dishes));
@@ -163,10 +173,10 @@ function normalizeMeal(meal) {
   if (value.includes("lunch")) return "lunch";
   if (value.includes("dinner")) return "dinner";
   if (value.includes("any")) return "any";
-  if (value === "\u65e9\u9910") return "breakfast";
-  if (value === "\u5348\u9910") return "lunch";
-  if (value === "\u665a\u9910") return "dinner";
-  if (value === "\u901a\u7528") return "any";
+  if (value === "早餐") return "breakfast";
+  if (value === "午餐") return "lunch";
+  if (value === "晚餐") return "dinner";
+  if (value === "通用") return "any";
   return "any";
 }
 

@@ -4,7 +4,7 @@
     <text>信号满格</text>
   </view>
   <view class="title-row">
-    <view class="page-title">纪念分享 <text>◎</text></view>
+    <view class="page-title">纪念分享 <text>●</text></view>
     <view bindtap="toggleComposer" class="week-pill">+ 发布</view>
   </view>
 
@@ -27,7 +27,7 @@
   <view wx:if="{{active === 'feed'}}" class="feed">
     <view wx:for="{{moments}}" wx:key="id" class="moment-card card">
       <view class="moment-head">
-        <view class="avatar small {{item.author === '阿杰' ? 'dark' : ''}}">{{item.avatar}}</view>
+        <view class="avatar small {{item.author === users.partner.name ? 'dark' : ''}}">{{item.avatar}}</view>
         <view class="moment-meta">
           <view class="author">{{item.author}}</view>
           <view class="time">{{item.time}}</view>

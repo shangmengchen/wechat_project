@@ -37,6 +37,10 @@ func (r *Repo) SyncState(userID string) (model.SyncState, error) {
 	return r.store.SyncState(userID)
 }
 
+func (r *Repo) CoupleForUser(userID string) (model.Couple, error) {
+	return r.store.CoupleForUser(userID)
+}
+
 func (r *Repo) GeneratePairCode(userID string) (model.Couple, error) {
 	return r.store.GeneratePairCode(userID)
 }
@@ -51,6 +55,10 @@ func (r *Repo) UpdateLoveDate(userID, loveDate string) (model.Couple, error) {
 
 func (r *Repo) UpdateUserProfile(currentUserID string, user model.User) (model.User, error) {
 	return r.store.UpdateUserProfileForUser(currentUserID, user)
+}
+
+func (r *Repo) Unpair(currentUserID string) (model.UnpairResult, error) {
+	return r.store.UnpairForUser(currentUserID)
 }
 
 func (r *Repo) Dashboard(userID string) (model.DashboardPayload, error) {
@@ -149,6 +157,18 @@ func (r *Repo) DeleteGoal(userID, id string) error {
 	return r.store.DeleteGoalForUser(userID, id)
 }
 
+func (r *Repo) AddNotice(notice model.Notice) (model.Notice, error) {
+	return r.store.AddNotice(notice)
+}
+
+func (r *Repo) UnreadNotices(userID string) ([]model.Notice, error) {
+	return r.store.UnreadNoticesForUser(userID)
+}
+
+func (r *Repo) MarkNoticesRead(userID string, categories []string) error {
+	return r.store.MarkNoticesReadForUser(userID, categories)
+}
+
 func (r *Repo) AdminOverview() (model.AdminOverview, error) {
 	return r.store.AdminOverview()
 }
@@ -159,4 +179,8 @@ func (r *Repo) AdminRecentUsers(limit int) ([]model.AdminUserSummary, error) {
 
 func (r *Repo) AdminRecentCouples(limit int) ([]model.AdminCoupleSummary, error) {
 	return r.store.AdminRecentCouples(limit)
+}
+
+func (r *Repo) AdminUnpairCouple(coupleID string) (model.UnpairResult, error) {
+	return r.store.AdminUnpairCouple(coupleID)
 }

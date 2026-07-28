@@ -38,10 +38,13 @@ func SetRouter(svc *service.Service) *gin.Engine {
 		authV1.GET("/sync/state", handler.SyncState)
 		authV1.POST("/pair/code", handler.GeneratePairCode)
 		authV1.POST("/pair/confirm", handler.ConfirmPair)
+		authV1.POST("/pair/unbind", handler.Unpair)
 		authV1.PATCH("/couple/love-date", handler.UpdateLoveDate)
 		authV1.PATCH("/users/:id/profile", handler.UpdateUserProfile)
 		authV1.GET("/dashboard", handler.Dashboard)
 		authV1.POST("/uploads/images", handler.UploadImage)
+		authV1.GET("/notices/unread", handler.UnreadNotices)
+		authV1.POST("/notices/read", handler.MarkNoticesRead)
 
 		authV1.GET("/moments", handler.Moments)
 		authV1.POST("/moments", handler.CreateMoment)
@@ -83,6 +86,8 @@ func SetRouter(svc *service.Service) *gin.Engine {
 		admin.GET("/", handler.AdminPage)
 		admin.GET("/api/meta", handler.AdminMeta)
 		admin.GET("/api/dashboard", handler.AdminDashboard)
+		admin.GET("/api/couples", handler.AdminCouples)
+		admin.POST("/api/couples/:id/unbind", handler.AdminUnpairCouple)
 		admin.GET("/api/errors", handler.AdminErrors)
 	}
 

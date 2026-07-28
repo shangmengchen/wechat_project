@@ -36,6 +36,9 @@ func NewMySQLStore(db *gorm.DB) *MySQLStore {
 func (s *MySQLStore) EnsureSchema(ctx context.Context, autoMigrate, autoSeed bool) error {
 	if autoMigrate {
 		tx := s.db.WithContext(ctx).Set("gorm:table_options", "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4")
+		if err := s.ensureCoupleMigrationCompatibility(ctx); err != nil {
+			return err
+		}
 		if err := tx.AutoMigrate(
 			&userModel{},
 			&coupleModel{},
@@ -46,6 +49,7 @@ func (s *MySQLStore) EnsureSchema(ctx context.Context, autoMigrate, autoSeed boo
 			&orderModel{},
 			&orderDishModel{},
 			&goalModel{},
+			&noticeModel{},
 		); err != nil {
 			return err
 		}
@@ -54,6 +58,21 @@ func (s *MySQLStore) EnsureSchema(ctx context.Context, autoMigrate, autoSeed boo
 		return nil
 	}
 	return s.seed(ctx)
+}
+
+func (s *MySQLStore) ensureCoupleMigrationCompatibility(ctx context.Context) error {
+	tx := s.db.WithContext(ctx)
+	if !tx.Migrator().HasTable(&coupleModel{}) || tx.Migrator().HasColumn(&coupleModel{}, "updated_at") {
+		return nil
+	}
+
+	if err := tx.Exec("ALTER TABLE `couples` ADD COLUMN `updated_at` datetime(3) NULL").Error; err != nil {
+		return err
+	}
+	if err := tx.Exec("UPDATE `couples` SET `updated_at` = NOW(3) WHERE `updated_at` IS NULL").Error; err != nil {
+		return err
+	}
+	return tx.Exec("ALTER TABLE `couples` MODIFY COLUMN `updated_at` datetime(3) NOT NULL").Error
 }
 
 func (s *MySQLStore) Login(userID, openid, nickname, avatar string) (domain.User, error) {
@@ -778,6 +797,24 @@ func (s *MySQLStore) AdminRecentCouples(limit int) ([]domain.AdminCoupleSummary,
 	return items, nil
 }
 
+func (s *MySQLStore) AdminUnpairCouple(coupleID string) (domain.UnpairResult, error) {
+	coupleID = strings.TrimSpace(coupleID)
+	if coupleID == "" {
+		return domain.UnpairResult{}, ErrNotFound
+	}
+	couple, err := s.coupleByID(coupleID)
+	if err != nil {
+		return domain.UnpairResult{}, err
+	}
+	if strings.TrimSpace(couple.UserBID) == "" {
+		return domain.UnpairResult{}, ErrNotFound
+	}
+	if err := s.unpairCouple(couple.ID); err != nil {
+		return domain.UnpairResult{}, err
+	}
+	return domain.UnpairResult{Couple: couple, InitiatorID: "admin"}, nil
+}
+
 func (s *MySQLStore) seed(ctx context.Context) error {
 	total, err := s.countModel(&userModel{}, "")
 	if err != nil || total > 0 {
@@ -1127,6 +1164,21 @@ func toGoal(row goalModel) domain.Goal {
 	}
 }
 
+func toNotice(row noticeModel) domain.Notice {
+	return domain.Notice{
+		ID:          row.ID,
+		CoupleID:    row.CoupleID,
+		RecipientID: row.RecipientID,
+		InitiatorID: row.InitiatorID,
+		Category:    row.Category,
+		Title:       row.Title,
+		Content:     row.Content,
+		Target:      row.Target,
+		ReadAt:      row.ReadAt,
+		CreatedAt:   row.CreatedAt,
+	}
+}
+
 func fromGoal(goal domain.Goal) goalModel {
 	return goalModel{
 		ID:           goal.ID,
@@ -1427,3 +1479,18 @@ type goalModel struct {
 }
 
 func (goalModel) TableName() string { return "goals" }
+
+type noticeModel struct {
+	ID          string     `gorm:"column:id;primaryKey;size:32"`
+	CoupleID    string     `gorm:"column:couple_id;size:32;not null;index"`
+	RecipientID string     `gorm:"column:recipient_id;size:32;not null;index"`
+	InitiatorID string     `gorm:"column:initiator_id;size:32;not null;default:''"`
+	Category    string     `gorm:"column:category;size:32;not null;index"`
+	Title       string     `gorm:"column:title;size:120;not null"`
+	Content     string     `gorm:"column:content;size:500;not null;default:''"`
+	Target      string     `gorm:"column:target;size:120;not null;default:''"`
+	ReadAt      *time.Time `gorm:"column:read_at;index"`
+	CreatedAt   time.Time  `gorm:"column:created_at;not null;index"`
+}
+
+func (noticeModel) TableName() string { return "notices" }

@@ -5,7 +5,7 @@
   </view>
   <view class="title-row">
     <view bindtap="goBack" class="back-dot">‹</view>
-    <view class="page-title">定时任务 <text>•</text></view>
+    <view class="page-title">定时任务 <text>⏰</text></view>
     <view bindtap="addSchedule" class="add-mini">+</view>
   </view>
 
@@ -42,7 +42,7 @@
   </view>
 
   <view wx:if="{{active === 'pending'}}" class="notice">
-    <view class="notice-icon">•</view>
+    <view class="notice-icon">⏰</view>
     <view>
       <view class="notice-title">今天待处理的提醒</view>
       <view class="notice-text">{{noticeText}}</view>
@@ -52,7 +52,7 @@
   <block wx:for="{{schedules}}" wx:key="id">
     <view wx:if="{{active === 'all' || item.pending}}" class="schedule-card card">
       <view class="task-row">
-        <view class="clock">•</view>
+        <view class="clock">⏰</view>
         <view class="schedule-main">
           <view class="schedule-title">{{item.title}}</view>
           <view class="tags">

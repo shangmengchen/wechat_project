@@ -40,6 +40,17 @@ type UpdateGoalStatusRequest struct {
 	Status string `json:"status"`
 }
 
+type CreateNoticeRequest struct {
+	Category string `json:"category"`
+	Title    string `json:"title"`
+	Content  string `json:"content"`
+	Target   string `json:"target"`
+}
+
+type MarkNoticesReadRequest struct {
+	Categories []string `json:"categories"`
+}
+
 type UserProfileRequest = model.User
 type CreateMomentRequest = model.Moment
 type CreateTaskRequest = model.Task

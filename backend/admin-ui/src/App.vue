@@ -2,135 +2,49 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 const meta = ref({
-  title: 'Couple Mini Admin',
+  title: '情侣小程序管理台',
   appName: '-',
   version: '-',
   runMode: '-'
 })
-
 const dashboard = ref(null)
+const couples = ref([])
 const initialLoading = ref(true)
 const loading = ref(false)
 const errorMessage = ref('')
 const refreshedAt = ref('')
+const unbindingId = ref('')
 
 let timer = null
-
-const statCards = [
-  { key: 'totalUsers', label: '使用人数', note: '平台注册总用户数', tone: 'warm' },
-  { key: 'pairedCouples', label: '匹配情侣对数', note: '已经完成双向确认的情侣关系', tone: 'cool' },
-  { key: 'pendingPairCodes', label: '待匹配邀请码', note: '已创建但仍待确认的邀请码', tone: 'plain' },
-  { key: 'newUsers24h', label: '24h 新用户', note: '最近 24 小时新增用户', tone: 'plain' },
-  { key: 'newCouples7d', label: '7d 新配对', note: '最近 7 天新增情侣关系', tone: 'plain' },
-  { key: 'openTasks', label: '未完成任务', note: '状态不是 done 的任务总数', tone: 'plain' },
-  { key: 'activeGoals', label: '活跃目标', note: '当前处于 active 状态的目标', tone: 'plain' },
-  { key: 'scheduledTasks', label: '周期任务', note: '提醒与周期计划总数', tone: 'plain' },
-  { key: 'totalMoments', label: '纪念时刻', note: '沉淀中的 moments 内容量', tone: 'plain' },
-  { key: 'totalOrders', label: '点单记录', note: '历史吃什么决策记录', tone: 'plain' },
-  { key: 'enabledDishes', label: '启用菜品', note: '当前可参与抽选的菜品', tone: 'plain' }
-]
 
 const overview = computed(() => dashboard.value?.overview ?? {})
 const runtime = computed(() => dashboard.value?.runtime ?? {})
 const metrics = computed(() => dashboard.value?.metrics ?? [])
 const recentUsers = computed(() => dashboard.value?.recentUsers ?? [])
-const recentCouples = computed(() => dashboard.value?.recentCouples ?? [])
+const recentCouples = computed(() => couples.value.length ? couples.value : (dashboard.value?.recentCouples ?? []))
 const errorLogs = computed(() => dashboard.value?.errorLogs ?? [])
+
+const statCards = computed(() => [
+  { label: '注册用户', value: overview.value.totalUsers, note: '平台累计用户数', tone: 'ink' },
+  { label: '已配对情侣', value: overview.value.pairedCouples, note: '可在下方执行解绑', tone: 'green' },
+  { label: '待确认分享码', value: overview.value.pendingPairCodes, note: '已生成但未输入确认', tone: 'amber' },
+  { label: '24h 新用户', value: overview.value.newUsers24h, note: '最近一天新增', tone: 'blue' },
+  { label: '7d 新配对', value: overview.value.newCouples7d, note: '最近七天完成配对', tone: 'rose' },
+  { label: '错误日志', value: runtime.value.errorTotal, note: '累计错误数量', tone: 'red' }
+])
 
 const cpuChart = computed(() => buildChart(metrics.value, item => item.cpuPercent ?? 0))
 const memoryChart = computed(() => buildChart(metrics.value, item => item.memoryPercent ?? 0))
 
-const logStats = computed(() => {
-  const total = errorLogs.value.length
-  const errorCount = errorLogs.value.filter(item => (item.level || '').toLowerCase() === 'error').length
-  const warnCount = errorLogs.value.filter(item => (item.level || '').toLowerCase() === 'warn').length
-  return { total, errorCount, warnCount }
-})
-
-const latestMetricTime = computed(() => {
-  const lastPoint = metrics.value[metrics.value.length - 1]
-  return lastPoint?.timestamp ? formatDateTime(lastPoint.timestamp) : '-'
-})
-
-const opsSummaries = computed(() => [
-  { label: '待匹配邀请码', value: `${formatNumber(overview.value.pendingPairCodes)} 个` },
-  { label: '未完成任务', value: `${formatNumber(overview.value.openTasks)} 项` },
-  { label: '最近错误日志', value: `${formatNumber(logStats.value.total)} 条` },
-  { label: '活跃目标', value: `${formatNumber(overview.value.activeGoals)} 个` }
-])
-
-const systemAlerts = computed(() => {
-  const alerts = []
-  const cpu = Number(runtime.value.lastCpuPercent || 0)
-  const memory = Number(runtime.value.lastMemoryPercent || 0)
-  const pendingCodes = Number(overview.value.pendingPairCodes || 0)
-  const openTasks = Number(overview.value.openTasks || 0)
-
-  if (cpu >= 80) {
-    alerts.push({
-      level: 'critical',
-      title: 'CPU 负载偏高',
-      detail: `当前 CPU 使用率 ${formatPercent(cpu)}，建议排查高频接口或循环任务。`
-    })
-  }
-
-  if (memory >= 80) {
-    alerts.push({
-      level: 'warning',
-      title: '内存占用持续偏高',
-      detail: `当前内存使用率 ${formatPercent(memory)}，建议结合错误日志检查是否有异常堆积。`
-    })
-  }
-
-  if (pendingCodes >= 20) {
-    alerts.push({
-      level: 'warning',
-      title: '待确认邀请码较多',
-      detail: `当前仍有 ${formatNumber(pendingCodes)} 个邀请码待匹配，建议观察配对流程是否卡住。`
-    })
-  }
-
-  if (openTasks >= 30) {
-    alerts.push({
-      level: 'info',
-      title: '未完成任务积压',
-      detail: `当前未完成任务 ${formatNumber(openTasks)} 项，可以关注是否存在长期未流转任务。`
-    })
-  }
-
-  if (logStats.value.errorCount > 0) {
-    alerts.push({
-      level: 'critical',
-      title: '最近出现错误日志',
-      detail: `最近日志中捕获到 ${formatNumber(logStats.value.errorCount)} 条 error，建议优先查看下方错误日志列表。`
-    })
-  } else if (logStats.value.warnCount > 0) {
-    alerts.push({
-      level: 'info',
-      title: '最近存在警告日志',
-      detail: `最近日志中出现 ${formatNumber(logStats.value.warnCount)} 条 warn，可作为巡检参考。`
-    })
-  }
-
-  if (!alerts.length) {
-    alerts.push({
-      level: 'healthy',
-      title: '系统状态稳定',
-      detail: '当前没有明显异常指标，服务、配对和基础资源都处于健康范围。'
-    })
-  }
-
-  return alerts.slice(0, 4)
-})
-
-async function requestData(url) {
+async function requestData(url, options = {}) {
   const response = await fetch(url, {
     cache: 'no-store',
-    credentials: 'same-origin'
+    credentials: 'same-origin',
+    ...options
   })
 
   if (!response.ok) {
-    throw new Error(`请求失败: ${response.status}`)
+    throw new Error(`请求失败：${response.status}`)
   }
 
   const payload = await response.json()
@@ -142,20 +56,41 @@ async function refresh() {
   errorMessage.value = ''
 
   try {
-    const [nextMeta, nextDashboard] = await Promise.all([
+    const [nextMeta, nextDashboard, nextCouples] = await Promise.all([
       requestData('/admin/api/meta'),
-      requestData('/admin/api/dashboard')
+      requestData('/admin/api/dashboard'),
+      requestData('/admin/api/couples?limit=100')
     ])
 
     meta.value = nextMeta
     dashboard.value = nextDashboard
+    couples.value = nextCouples
     refreshedAt.value = formatDateTime(new Date())
-    document.title = nextMeta.title || 'Couple Mini Admin'
+    document.title = nextMeta.title || '情侣小程序管理台'
   } catch (error) {
     errorMessage.value = error?.message || String(error)
   } finally {
     loading.value = false
     initialLoading.value = false
+  }
+}
+
+async function unbindCouple(couple) {
+  if (!couple?.id || !couple.userBId) return
+  const confirmed = window.confirm(`确认解除这对用户的绑定吗？\n\n情侣 ID：${couple.id}\n用户：${couple.userAId} / ${couple.userBId}`)
+  if (!confirmed) return
+
+  unbindingId.value = couple.id
+  errorMessage.value = ''
+  try {
+    await requestData(`/admin/api/couples/${encodeURIComponent(couple.id)}/unbind`, {
+      method: 'POST'
+    })
+    await refresh()
+  } catch (error) {
+    errorMessage.value = error?.message || String(error)
+  } finally {
+    unbindingId.value = ''
   }
 }
 
@@ -165,39 +100,26 @@ function startTimer() {
 }
 
 function stopTimer() {
-  if (timer) {
-    window.clearInterval(timer)
-    timer = null
-  }
+  if (!timer) return
+  window.clearInterval(timer)
+  timer = null
 }
 
 function buildChart(points, getter) {
-  if (!points.length) {
-    return { line: '', area: '', guides: [] }
-  }
-
-  const width = 560
-  const height = 220
-  const padding = 20
+  if (!points.length) return ''
+  const width = 420
+  const height = 120
+  const padding = 10
   const values = points.map(getter)
   const upperBound = Math.max(100, ...values, 1)
   const stepX = values.length > 1 ? (width - padding * 2) / (values.length - 1) : 0
-
-  const line = values
+  return values
     .map((value, index) => {
       const x = padding + stepX * index
       const y = height - padding - ((height - padding * 2) * value) / upperBound
       return `${x},${y}`
     })
     .join(' ')
-
-  const area = `${padding},${height - padding} ${line} ${width - padding},${height - padding}`
-  const guides = [0, 25, 50, 75, 100].map(mark => ({
-    mark,
-    y: height - padding - ((height - padding * 2) * mark) / upperBound
-  }))
-
-  return { line, area, guides }
 }
 
 function formatNumber(value) {
@@ -224,38 +146,17 @@ function formatUptime(seconds) {
   const days = Math.floor(total / 86400)
   const hours = Math.floor((total % 86400) / 3600)
   const minutes = Math.floor((total % 3600) / 60)
-
-  if (days > 0) return `${days}天 ${hours}小时 ${minutes}分钟`
+  if (days > 0) return `${days}天 ${hours}小时`
   if (hours > 0) return `${hours}小时 ${minutes}分钟`
   return `${minutes}分钟`
 }
 
+function pairStatus(couple) {
+  return couple.userBId ? '已绑定' : '待确认'
+}
+
 function pad(value) {
   return String(value).padStart(2, '0')
-}
-
-function logLevelClass(level) {
-  switch ((level || '').toLowerCase()) {
-    case 'error':
-      return 'pill-error'
-    case 'warn':
-      return 'pill-warn'
-    default:
-      return 'pill-info'
-  }
-}
-
-function alertClass(level) {
-  switch (level) {
-    case 'critical':
-      return 'alert-critical'
-    case 'warning':
-      return 'alert-warning'
-    case 'healthy':
-      return 'alert-healthy'
-    default:
-      return 'alert-info'
-  }
 }
 
 onMounted(async () => {
@@ -269,207 +170,83 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="page-shell">
-    <section class="hero-grid">
-      <div class="panel hero-panel">
-        <div class="hero-badge">Vue Admin</div>
+  <main class="page-shell">
+    <section class="hero-panel panel">
+      <div>
+        <p class="eyebrow">Couple Mini Ops</p>
         <h1>{{ meta.title }}</h1>
         <p class="hero-copy">
-          面向情侣小程序的运营管理台。这里把业务概览、配对进度、系统资源曲线和错误日志放在同一页，
-          方便你上线后快速巡检、查错和观察增长。
+          查看小程序运行状态、用户增长和情侣绑定关系。危险操作集中在表格内，执行解绑前会再次确认。
         </p>
-
-        <div class="hero-meta">
-          <div class="meta-chip">
-            <span>应用</span>
-            <strong>{{ meta.appName }}</strong>
-          </div>
-          <div class="meta-chip">
-            <span>版本</span>
-            <strong>{{ meta.version }}</strong>
-          </div>
-          <div class="meta-chip">
-            <span>模式</span>
-            <strong>{{ meta.runMode }}</strong>
-          </div>
-          <div class="meta-chip">
-            <span>刷新时间</span>
-            <strong>{{ refreshedAt || '-' }}</strong>
-          </div>
-        </div>
       </div>
+      <div class="hero-actions">
+        <div class="meta-stack">
+          <span>{{ meta.appName }}</span>
+          <strong>{{ meta.version }} · {{ meta.runMode }}</strong>
+          <small>最后刷新：{{ refreshedAt || '-' }}</small>
+        </div>
+        <button class="refresh-btn" :disabled="loading" @click="refresh">
+          {{ loading ? '刷新中...' : '立即刷新' }}
+        </button>
+      </div>
+    </section>
 
-      <div class="panel runtime-panel">
-        <div class="runtime-header">
+    <div v-if="errorMessage" class="error-banner">
+      {{ errorMessage }}
+    </div>
+
+    <section class="stats-grid">
+      <article v-for="card in statCards" :key="card.label" class="stat-card panel" :class="`tone-${card.tone}`">
+        <span>{{ card.label }}</span>
+        <strong>{{ formatNumber(card.value) }}</strong>
+        <p>{{ card.note }}</p>
+      </article>
+    </section>
+
+    <section class="ops-grid">
+      <article class="panel runtime-card">
+        <div class="section-head">
           <div>
             <p class="eyebrow">Runtime</p>
-            <h2>服务健康快照</h2>
-            <p class="section-copy">把运行时状态、请求量和错误累计先看一眼，再往下钻日志。</p>
+            <h2>服务健康</h2>
           </div>
-          <button class="refresh-btn" :disabled="loading" @click="refresh">
-            {{ loading ? '刷新中...' : '立即刷新' }}
-          </button>
+          <span class="health-pill">在线</span>
         </div>
-
-        <div class="runtime-grid">
-          <div class="runtime-card">
-            <span>服务运行时长</span>
-            <strong>{{ formatUptime(runtime.uptimeSeconds) }}</strong>
-          </div>
-          <div class="runtime-card">
-            <span>总请求数</span>
-            <strong>{{ formatNumber(runtime.requestTotal) }}</strong>
-          </div>
-          <div class="runtime-card">
-            <span>错误总数</span>
-            <strong>{{ formatNumber(runtime.errorTotal) }}</strong>
-          </div>
-          <div class="runtime-card">
-            <span>Goroutines</span>
-            <strong>{{ formatNumber(runtime.goroutines) }}</strong>
-          </div>
+        <div class="runtime-list">
+          <div><span>运行时长</span><strong>{{ formatUptime(runtime.uptimeSeconds) }}</strong></div>
+          <div><span>请求总数</span><strong>{{ formatNumber(runtime.requestTotal) }}</strong></div>
+          <div><span>Goroutines</span><strong>{{ formatNumber(runtime.goroutines) }}</strong></div>
+          <div><span>进程内存</span><strong>{{ formatMemory(runtime.processMemoryMB) }}</strong></div>
         </div>
-      </div>
-    </section>
+      </article>
 
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h2>巡检提醒</h2>
-          <p>把最值得你优先看的风险点和健康信号提前提炼出来，减少翻日志的时间。</p>
-        </div>
-        <div class="metric-chip">最近采样 {{ latestMetricTime }}</div>
-      </div>
-
-      <div class="alert-grid">
-        <article
-          v-for="item in systemAlerts"
-          :key="item.title"
-          class="panel alert-card"
-          :class="alertClass(item.level)"
-        >
-          <span class="alert-level">{{ item.level }}</span>
-          <strong>{{ item.title }}</strong>
-          <p>{{ item.detail }}</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h2>核心业务指标</h2>
-          <p>从新增、配对、任务和内容沉淀几个方向看整体业务状态。</p>
-        </div>
-      </div>
-
-      <div class="stats-grid">
-        <article
-          v-for="card in statCards"
-          :key="card.key"
-          class="panel stat-card"
-          :class="`tone-${card.tone}`"
-        >
-          <span class="stat-label">{{ card.label }}</span>
-          <strong class="stat-value">{{ formatNumber(overview[card.key]) }}</strong>
-          <p class="stat-note">{{ card.note }}</p>
-        </article>
-      </div>
-    </section>
-
-    <section class="section-block">
-      <div class="section-head">
-        <div>
-          <h2>系统资源与趋势</h2>
-          <p>CPU、内存和运维摘要适合用来观察线上抖动、峰值与持续积压。</p>
-        </div>
-      </div>
-
-      <div class="chart-layout">
-        <div class="panel chart-card">
-          <div class="chart-top">
-            <div>
-              <span class="chart-label">CPU 使用率</span>
-              <strong>{{ formatPercent(runtime.lastCpuPercent) }}</strong>
-            </div>
-            <span class="chart-pill chart-pill-warm">实时曲线</span>
-          </div>
-
-          <div class="chart-box">
-            <svg viewBox="0 0 560 220" preserveAspectRatio="none" aria-label="CPU usage chart">
-              <line
-                v-for="guide in cpuChart.guides"
-                :key="`cpu-${guide.mark}`"
-                x1="20"
-                :y1="guide.y"
-                x2="540"
-                :y2="guide.y"
-                class="guide-line"
-              />
-              <polyline v-if="cpuChart.area" :points="cpuChart.area" class="area-warm" />
-              <polyline v-if="cpuChart.line" :points="cpuChart.line" class="line-warm" />
-            </svg>
-          </div>
-        </div>
-
-        <div class="panel chart-card">
-          <div class="chart-top">
-            <div>
-              <span class="chart-label">内存使用率</span>
-              <strong>{{ formatPercent(runtime.lastMemoryPercent) }}</strong>
-            </div>
-            <span class="chart-pill chart-pill-cool">实时曲线</span>
-          </div>
-
-          <div class="chart-box">
-            <svg viewBox="0 0 560 220" preserveAspectRatio="none" aria-label="Memory usage chart">
-              <line
-                v-for="guide in memoryChart.guides"
-                :key="`memory-${guide.mark}`"
-                x1="20"
-                :y1="guide.y"
-                x2="540"
-                :y2="guide.y"
-                class="guide-line"
-              />
-              <polyline v-if="memoryChart.area" :points="memoryChart.area" class="area-cool" />
-              <polyline v-if="memoryChart.line" :points="memoryChart.line" class="line-cool" />
-            </svg>
-          </div>
-        </div>
-
-        <div class="panel insights-card">
-          <div class="chart-top">
-            <div>
-              <span class="chart-label">运维摘要</span>
-              <strong>{{ formatMemory(runtime.processMemoryMB) }}</strong>
-            </div>
-            <span class="chart-pill chart-pill-neutral">重点巡检</span>
-          </div>
-
-          <div class="insight-list">
-            <div v-for="item in opsSummaries" :key="item.label" class="insight-item">
-              <span>{{ item.label }}</span>
-              <strong>{{ item.value }}</strong>
-            </div>
-          </div>
-
-          <p class="insight-note">
-            建议优先关注错误总数、待匹配邀请码和未完成任务量，这三项最容易帮助你快速定位业务堵点。
-          </p>
-        </div>
-      </div>
-    </section>
-
-    <section class="section-block dual-layout">
-      <div class="panel table-card">
-        <div class="section-head compact">
+      <article class="panel chart-card">
+        <div class="section-head">
           <div>
+            <p class="eyebrow">Resources</p>
+            <h2>资源趋势</h2>
+          </div>
+          <span>{{ formatPercent(runtime.lastCpuPercent) }} / {{ formatPercent(runtime.lastMemoryPercent) }}</span>
+        </div>
+        <svg viewBox="0 0 420 120" preserveAspectRatio="none">
+          <polyline v-if="cpuChart" :points="cpuChart" class="line-cpu" />
+          <polyline v-if="memoryChart" :points="memoryChart" class="line-memory" />
+        </svg>
+        <div class="legend">
+          <span><i class="cpu-dot"></i>CPU</span>
+          <span><i class="memory-dot"></i>内存</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="dual-grid">
+      <article class="panel table-card">
+        <div class="section-head">
+          <div>
+            <p class="eyebrow">Users</p>
             <h2>最近用户</h2>
-            <p>观察最近注册与活跃开通节奏，判断增长是否正常。</p>
           </div>
         </div>
-
         <div v-if="recentUsers.length" class="table-shell">
           <table>
             <thead>
@@ -491,16 +268,16 @@ onBeforeUnmount(() => {
           </table>
         </div>
         <div v-else class="empty-box">暂无用户数据</div>
-      </div>
+      </article>
 
-      <div class="panel table-card">
-        <div class="section-head compact">
+      <article class="panel table-card">
+        <div class="section-head">
           <div>
+            <p class="eyebrow">Couples</p>
             <h2>最近情侣配对</h2>
-            <p>快速判断最近匹配是否顺畅，也能看出待确认邀请码是否变多。</p>
           </div>
+          <span class="danger-note">支持管理员解绑</span>
         </div>
-
         <div v-if="recentCouples.length" class="table-shell">
           <table>
             <thead>
@@ -509,7 +286,7 @@ onBeforeUnmount(() => {
                 <th>用户组合</th>
                 <th>恋爱日</th>
                 <th>状态</th>
-                <th>创建时间</th>
+                <th>操作</th>
               </tr>
             </thead>
             <tbody>
@@ -517,82 +294,68 @@ onBeforeUnmount(() => {
                 <td>{{ couple.id }}</td>
                 <td>{{ couple.userAId }} / {{ couple.userBId || '待确认' }}</td>
                 <td>{{ couple.loveDate || '-' }}</td>
-                <td>{{ couple.userBId ? '已配对' : '待确认' }}</td>
-                <td>{{ formatDateTime(couple.createdAt) }}</td>
+                <td>
+                  <span class="status-chip" :class="{ pending: !couple.userBId }">
+                    {{ pairStatus(couple) }}
+                  </span>
+                </td>
+                <td>
+                  <button
+                    class="danger-btn"
+                    :disabled="!couple.userBId || unbindingId === couple.id"
+                    @click="unbindCouple(couple)"
+                  >
+                    {{ unbindingId === couple.id ? '解绑中...' : '解除绑定' }}
+                  </button>
+                </td>
               </tr>
             </tbody>
           </table>
         </div>
         <div v-else class="empty-box">暂无情侣数据</div>
-      </div>
+      </article>
     </section>
 
-    <section class="section-block">
-      <div class="panel log-card">
-        <div class="section-head compact">
-          <div>
-            <h2>错误日志捕获</h2>
-            <p>最近的 error 和 warn 会展示在这里，适合配合 Request ID 做线上排查。</p>
-          </div>
-          <div class="log-summary">
-            <span class="summary-pill summary-pill-error">Error {{ formatNumber(logStats.errorCount) }}</span>
-            <span class="summary-pill summary-pill-warn">Warn {{ formatNumber(logStats.warnCount) }}</span>
-          </div>
+    <section class="panel log-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Logs</p>
+          <h2>最近错误日志</h2>
         </div>
-
-        <div v-if="errorMessage" class="empty-box danger-box">
-          管理台数据加载失败：{{ errorMessage }}
-        </div>
-
-        <div v-else-if="errorLogs.length" class="log-list">
-          <article v-for="(item, index) in errorLogs" :key="`${item.time}-${index}`" class="log-item">
-            <div class="log-head">
-              <span class="level-pill" :class="logLevelClass(item.level)">
-                {{ (item.level || 'info').toUpperCase() }}
-              </span>
-              <span>{{ item.time || '-' }}</span>
-              <span v-if="item.requestId">Request ID: {{ item.requestId }}</span>
-              <span v-if="item.path">Path: {{ item.path }}</span>
-            </div>
-            <strong class="log-title">{{ item.message || 'No message' }}</strong>
-            <p v-if="item.error" class="log-error">Error: {{ item.error }}</p>
-          </article>
-        </div>
-
-        <div v-else class="empty-box">最近没有捕获到 error / warn 日志</div>
       </div>
+      <div v-if="errorLogs.length" class="log-list">
+        <article v-for="(item, index) in errorLogs" :key="`${item.time}-${index}`" class="log-item">
+          <span>{{ (item.level || 'info').toUpperCase() }} · {{ item.time || '-' }}</span>
+          <strong>{{ item.message || 'No message' }}</strong>
+          <p v-if="item.error">{{ item.error }}</p>
+        </article>
+      </div>
+      <div v-else class="empty-box">最近没有 error / warn 日志</div>
     </section>
 
     <div v-if="initialLoading" class="loading-mask">
       <div class="loading-card">
         <strong>管理台加载中</strong>
-        <p>正在拉取后台概览、系统指标和日志数据...</p>
+        <p>正在读取后端状态和情侣关系...</p>
       </div>
     </div>
-  </div>
+  </main>
 </template>
 
 <style>
 :root {
   color-scheme: light;
-  --bg: #f4efe7;
-  --panel: rgba(255, 252, 247, 0.93);
-  --panel-strong: rgba(255, 251, 245, 0.98);
-  --ink: #1f1c19;
-  --muted: #6f665d;
-  --line: rgba(35, 29, 24, 0.08);
-  --warm: #c75d2c;
-  --warm-soft: rgba(199, 93, 44, 0.14);
-  --cool: #0e6b73;
-  --cool-soft: rgba(14, 107, 115, 0.12);
-  --neutral-soft: rgba(29, 28, 25, 0.06);
-  --danger: #b42318;
-  --danger-soft: rgba(180, 35, 24, 0.09);
-  --success: #1f7a4d;
-  --success-soft: rgba(31, 122, 77, 0.09);
-  --warning: #a85b18;
-  --warning-soft: rgba(168, 91, 24, 0.1);
-  --shadow: 0 24px 60px rgba(63, 39, 20, 0.12);
+  --paper: #f5efe5;
+  --panel: rgba(255, 252, 246, 0.94);
+  --ink: #211b16;
+  --muted: #74695e;
+  --line: rgba(33, 27, 22, 0.1);
+  --green: #1f7a4d;
+  --amber: #b76418;
+  --blue: #145f72;
+  --rose: #bb4669;
+  --red: #b42318;
+  --shadow: 0 24px 70px rgba(77, 49, 24, 0.13);
 }
 
 * {
@@ -603,421 +366,261 @@ body {
   margin: 0;
   min-height: 100vh;
   color: var(--ink);
-  font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif;
+  font-family: "LXGW WenKai", "Noto Serif SC", "Microsoft YaHei", sans-serif;
   background:
-    radial-gradient(circle at top left, rgba(199, 93, 44, 0.18), transparent 24%),
-    radial-gradient(circle at top right, rgba(14, 107, 115, 0.14), transparent 20%),
-    linear-gradient(180deg, #faf4ec 0%, var(--bg) 100%);
+    radial-gradient(circle at 6% 0%, rgba(183, 100, 24, 0.2), transparent 28%),
+    radial-gradient(circle at 90% 10%, rgba(20, 95, 114, 0.14), transparent 24%),
+    linear-gradient(180deg, #fbf6ee 0%, var(--paper) 100%);
 }
 
-#app {
-  min-height: 100vh;
+button {
+  font: inherit;
 }
 
 .page-shell {
-  position: relative;
   width: min(1480px, calc(100vw - 32px));
-  margin: 22px auto 52px;
+  margin: 24px auto 56px;
 }
 
 .panel {
-  background: var(--panel);
   border: 1px solid var(--line);
   border-radius: 28px;
+  background: var(--panel);
   box-shadow: var(--shadow);
-  backdrop-filter: blur(12px);
-}
-
-.hero-grid {
-  display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  gap: 18px;
-  margin-bottom: 18px;
 }
 
 .hero-panel {
-  position: relative;
-  overflow: hidden;
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
   padding: 30px;
 }
 
-.hero-panel::after {
-  content: "";
-  position: absolute;
-  right: -46px;
-  bottom: -64px;
-  width: 220px;
-  height: 220px;
-  border-radius: 999px;
-  background: linear-gradient(135deg, rgba(199, 93, 44, 0.16), rgba(14, 107, 115, 0.08));
-}
-
-.hero-badge,
-.chart-pill,
-.level-pill,
-.summary-pill,
-.metric-chip {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  font-weight: 700;
-}
-
-.hero-badge {
-  padding: 8px 14px;
-  background: var(--warm-soft);
-  color: var(--warm);
-  font-size: 13px;
-  letter-spacing: 0.08em;
+.eyebrow {
+  margin: 0 0 8px;
+  color: var(--amber);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
 }
 
-.hero-panel h1,
-.runtime-header h2,
-.section-head h2 {
-  margin: 0;
+h1,
+h2,
+p {
+  margin-top: 0;
 }
 
-.hero-panel h1 {
-  margin-top: 14px;
-  font-size: clamp(32px, 3.8vw, 50px);
-  line-height: 1.06;
+h1 {
+  margin-bottom: 12px;
+  font-size: clamp(34px, 4vw, 56px);
+  line-height: 1.02;
   letter-spacing: -0.04em;
 }
 
+h2 {
+  margin-bottom: 0;
+  font-size: 22px;
+}
+
 .hero-copy,
-.section-head p,
-.section-copy,
-.insight-note,
+.stat-card p,
 .empty-box,
-.table-shell table,
-.log-error,
-.alert-card p {
+.log-item p {
   color: var(--muted);
+  line-height: 1.7;
 }
 
-.hero-copy {
-  max-width: 60ch;
-  margin: 12px 0 0;
-  font-size: 15px;
-  line-height: 1.8;
-}
-
-.hero-meta {
+.hero-actions {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 22px;
+  align-items: flex-start;
+  gap: 14px;
 }
 
-.meta-chip {
-  display: inline-flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 124px;
-  padding: 12px 14px;
-  border-radius: 18px;
-  background: rgba(29, 28, 25, 0.04);
-}
-
-.meta-chip span,
-.eyebrow,
-.stat-label,
-.chart-label,
-.runtime-card span,
-.insight-item span,
-th,
-.alert-level {
-  font-size: 12px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-.meta-chip strong {
-  font-size: 14px;
-}
-
-.runtime-panel {
+.meta-stack {
   display: grid;
-  gap: 18px;
-  padding: 24px;
+  gap: 5px;
+  min-width: 220px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(33, 27, 22, 0.05);
 }
 
-.runtime-header,
+.meta-stack span,
+.meta-stack small,
+th {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.refresh-btn,
+.danger-btn {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 900;
+}
+
+.refresh-btn {
+  padding: 12px 18px;
+  color: #fff;
+  background: #211b16;
+}
+
+.refresh-btn:disabled,
+.danger-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.error-banner {
+  margin: 16px 0;
+  padding: 14px 18px;
+  border: 1px solid rgba(180, 35, 24, 0.24);
+  border-radius: 18px;
+  color: var(--red);
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.stats-grid,
+.ops-grid,
+.dual-grid {
+  display: grid;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.stats-grid {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.ops-grid,
+.dual-grid {
+  grid-template-columns: 1fr 1.35fr;
+}
+
+.stat-card,
+.runtime-card,
+.chart-card,
+.table-card,
+.log-card {
+  padding: 20px;
+}
+
+.stat-card span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.stat-card strong {
+  display: block;
+  margin: 18px 0 8px;
+  font-size: 38px;
+  line-height: 1;
+}
+
+.tone-green strong { color: var(--green); }
+.tone-amber strong { color: var(--amber); }
+.tone-blue strong { color: var(--blue); }
+.tone-rose strong { color: var(--rose); }
+.tone-red strong { color: var(--red); }
+
 .section-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  margin-bottom: 16px;
 }
 
-.runtime-header h2,
-.section-head h2 {
-  font-size: 22px;
+.health-pill,
+.danger-note,
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 7px 11px;
+  font-size: 12px;
+  font-weight: 900;
 }
 
-.section-copy {
-  margin: 8px 0 0;
-  font-size: 13px;
-  line-height: 1.6;
+.health-pill,
+.status-chip {
+  color: var(--green);
+  background: rgba(31, 122, 77, 0.11);
 }
 
-.runtime-grid {
+.status-chip.pending {
+  color: var(--amber);
+  background: rgba(183, 100, 24, 0.11);
+}
+
+.danger-note {
+  color: var(--red);
+  background: rgba(180, 35, 24, 0.08);
+}
+
+.runtime-list {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
-.runtime-card,
-.insight-item,
-.log-item,
-.alert-card {
+.runtime-list div {
+  padding: 14px;
   border-radius: 18px;
-  border: 1px solid var(--line);
-  background: rgba(29, 28, 25, 0.03);
+  background: rgba(33, 27, 22, 0.04);
 }
 
-.runtime-card {
-  padding: 16px;
-}
-
-.runtime-card strong {
+.runtime-list span {
   display: block;
-  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.runtime-list strong {
+  display: block;
+  margin-top: 7px;
   font-size: 22px;
 }
 
-.refresh-btn {
-  appearance: none;
-  border: 0;
-  border-radius: 999px;
-  background: linear-gradient(135deg, #221d1a, #45342b);
-  color: #fff;
-  padding: 11px 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.refresh-btn:disabled {
-  cursor: wait;
-  opacity: 0.72;
-}
-
-.section-block {
-  margin-bottom: 18px;
-}
-
-.metric-chip {
-  padding: 9px 14px;
-  background: rgba(29, 28, 25, 0.05);
-  color: #4c433c;
-  font-size: 12px;
-}
-
-.alert-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.alert-card {
-  min-height: 156px;
-  padding: 18px;
-}
-
-.alert-card strong {
-  display: block;
-  margin-top: 12px;
-  font-size: 20px;
-  line-height: 1.25;
-}
-
-.alert-card p {
-  margin: 10px 0 0;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.alert-critical {
-  background: linear-gradient(180deg, rgba(180, 35, 24, 0.11), rgba(255, 252, 247, 0.94));
-}
-
-.alert-warning {
-  background: linear-gradient(180deg, rgba(168, 91, 24, 0.1), rgba(255, 252, 247, 0.94));
-}
-
-.alert-info {
-  background: linear-gradient(180deg, rgba(14, 107, 115, 0.08), rgba(255, 252, 247, 0.94));
-}
-
-.alert-healthy {
-  background: linear-gradient(180deg, rgba(31, 122, 77, 0.08), rgba(255, 252, 247, 0.94));
-}
-
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.stat-card {
-  min-height: 150px;
-  padding: 18px;
-}
-
-.tone-warm {
-  background: linear-gradient(160deg, rgba(199, 93, 44, 0.13), rgba(255, 252, 247, 0.88));
-}
-
-.tone-cool {
-  background: linear-gradient(160deg, rgba(14, 107, 115, 0.12), rgba(255, 252, 247, 0.88));
-}
-
-.tone-plain {
-  background: rgba(255, 252, 247, 0.88);
-}
-
-.stat-value {
-  display: block;
-  margin: 18px 0 10px;
-  font-size: 34px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-}
-
-.stat-note {
-  margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--muted);
-}
-
-.chart-layout {
-  display: grid;
-  grid-template-columns: 1.2fr 1.2fr 0.9fr;
-  gap: 12px;
-}
-
-.chart-card,
-.insights-card,
-.table-card,
-.log-card {
-  padding: 18px;
-}
-
-.chart-top {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.chart-top strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 28px;
-  letter-spacing: -0.03em;
-}
-
-.chart-pill {
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-.chart-pill-warm {
-  background: var(--warm-soft);
-  color: var(--warm);
-}
-
-.chart-pill-cool {
-  background: var(--cool-soft);
-  color: var(--cool);
-}
-
-.chart-pill-neutral {
-  background: var(--neutral-soft);
-  color: #40352f;
-}
-
-.chart-box {
-  height: 190px;
-  padding: 8px;
-  border-radius: 20px;
-  border: 1px solid var(--line);
-  background: linear-gradient(180deg, rgba(29, 28, 25, 0.03), rgba(29, 28, 25, 0.01));
-}
-
 svg {
-  display: block;
   width: 100%;
-  height: 100%;
+  height: 170px;
+  border-radius: 20px;
+  background: rgba(33, 27, 22, 0.04);
 }
 
-.guide-line {
-  stroke: rgba(29, 28, 25, 0.08);
-  stroke-dasharray: 4 6;
-}
-
-.line-warm,
-.line-cool {
+.line-cpu,
+.line-memory {
   fill: none;
-  stroke-width: 3.5;
+  stroke-width: 4;
   stroke-linecap: round;
   stroke-linejoin: round;
 }
 
-.line-warm {
-  stroke: var(--warm);
-}
+.line-cpu { stroke: var(--amber); }
+.line-memory { stroke: var(--blue); }
 
-.line-cool {
-  stroke: var(--cool);
-}
-
-.area-warm {
-  fill: rgba(199, 93, 44, 0.16);
-  stroke: none;
-}
-
-.area-cool {
-  fill: rgba(14, 107, 115, 0.14);
-  stroke: none;
-}
-
-.insight-list {
-  display: grid;
-  gap: 10px;
-}
-
-.insight-item {
-  padding: 14px;
-}
-
-.insight-item strong {
-  display: block;
-  margin-top: 6px;
-  font-size: 20px;
-  color: var(--ink);
-}
-
-.insight-note {
-  margin: 14px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.dual-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.legend {
+  display: flex;
   gap: 12px;
+  margin-top: 10px;
+  color: var(--muted);
+  font-size: 13px;
 }
 
-.compact {
-  margin-bottom: 12px;
+.legend i {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 6px;
+  border-radius: 999px;
 }
+
+.cpu-dot { background: var(--amber); }
+.memory-dot { background: var(--blue); }
 
 .table-shell {
   overflow: auto;
@@ -1030,176 +633,102 @@ table {
 
 th,
 td {
-  padding: 12px 10px;
+  padding: 13px 10px;
   border-bottom: 1px solid var(--line);
   text-align: left;
-  vertical-align: top;
-}
-
-th {
-  font-weight: 700;
+  vertical-align: middle;
 }
 
 td {
   font-size: 14px;
 }
 
-.log-summary {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.danger-btn {
+  padding: 9px 13px;
+  color: #fff;
+  background: linear-gradient(135deg, #d33f49, #a91e24);
 }
 
-.summary-pill {
-  padding: 8px 12px;
-  font-size: 12px;
+.empty-box {
+  padding: 32px 18px;
+  border: 1px dashed var(--line);
+  border-radius: 20px;
+  text-align: center;
+  background: rgba(33, 27, 22, 0.03);
 }
 
-.summary-pill-error {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.summary-pill-warn {
-  background: var(--warning-soft);
-  color: var(--warning);
+.log-card {
+  margin-top: 14px;
 }
 
 .log-list {
   display: grid;
   gap: 10px;
-  max-height: 480px;
+  max-height: 440px;
   overflow: auto;
-  padding-right: 4px;
 }
 
 .log-item {
   padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(33, 27, 22, 0.03);
 }
 
-.log-head {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  align-items: center;
-  margin-bottom: 8px;
-  color: var(--muted);
+.log-item span {
+  color: var(--red);
   font-size: 12px;
+  font-weight: 900;
 }
 
-.level-pill {
-  padding: 5px 10px;
-  font-size: 11px;
-}
-
-.pill-error {
-  background: rgba(180, 35, 24, 0.16);
-  color: var(--danger);
-}
-
-.pill-warn {
-  background: rgba(174, 90, 25, 0.16);
-  color: var(--warning);
-}
-
-.pill-info {
-  background: rgba(14, 107, 115, 0.12);
-  color: var(--cool);
-}
-
-.log-title {
-  font-size: 15px;
-}
-
-.log-error {
-  margin: 8px 0 0;
-  font-size: 12px;
-  line-height: 1.6;
-}
-
-.empty-box {
-  padding: 30px 18px;
-  border-radius: 20px;
-  border: 1px dashed var(--line);
-  text-align: center;
-  background: rgba(29, 28, 25, 0.03);
-}
-
-.danger-box {
-  border-color: rgba(180, 35, 24, 0.18);
-  color: var(--danger);
-  background: rgba(180, 35, 24, 0.05);
+.log-item strong {
+  display: block;
+  margin-top: 6px;
 }
 
 .loading-mask {
   position: fixed;
   inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(244, 239, 231, 0.7);
-  backdrop-filter: blur(6px);
+  display: grid;
+  place-items: center;
+  background: rgba(245, 239, 229, 0.72);
+  backdrop-filter: blur(8px);
 }
 
 .loading-card {
   width: min(360px, calc(100vw - 32px));
   padding: 24px;
-  border-radius: 24px;
   border: 1px solid var(--line);
-  background: var(--panel-strong);
+  border-radius: 24px;
+  background: var(--panel);
   box-shadow: var(--shadow);
 }
 
-.loading-card strong {
-  display: block;
-  font-size: 22px;
-}
-
-.loading-card p {
-  margin: 10px 0 0;
-  color: var(--muted);
-  line-height: 1.7;
-}
-
-@media (max-width: 1260px) {
-  .alert-grid,
+@media (max-width: 1180px) {
   .stats-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .chart-layout {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .insights-card {
-    grid-column: 1 / -1;
+  .ops-grid,
+  .dual-grid {
+    grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 920px) {
+@media (max-width: 760px) {
   .page-shell {
     width: min(100vw - 20px, 100%);
     margin-top: 10px;
   }
 
-  .hero-grid,
-  .dual-layout,
-  .chart-layout,
-  .stats-grid,
-  .runtime-grid,
-  .alert-grid {
-    grid-template-columns: 1fr;
+  .hero-panel,
+  .hero-actions {
+    flex-direction: column;
   }
 
-  .hero-panel,
-  .runtime-panel,
-  .alert-card,
-  .stat-card,
-  .chart-card,
-  .insights-card,
-  .table-card,
-  .log-card {
-    padding: 16px;
+  .stats-grid,
+  .runtime-list {
+    grid-template-columns: 1fr;
   }
 }
 </style>

@@ -1,14 +1,20 @@
 package service
 
-import "couple-mini/backend/internal/model"
+import (
+	"strings"
+
+	"couple-mini/backend/internal/model"
+)
 
 type Repository interface {
 	Login(userID, openid, nickname, avatar string) (model.User, error)
 	SyncState(userID string) (model.SyncState, error)
+	CoupleForUser(userID string) (model.Couple, error)
 	GeneratePairCode(userID string) (model.Couple, error)
 	PairByCode(userID, code, loveDate string) (model.Couple, error)
 	UpdateLoveDate(userID, loveDate string) (model.Couple, error)
 	UpdateUserProfile(currentUserID string, user model.User) (model.User, error)
+	Unpair(currentUserID string) (model.UnpairResult, error)
 	Dashboard(userID string) (model.DashboardPayload, error)
 	Moments(userID string) ([]model.Moment, error)
 	AddMoment(userID string, moment model.Moment) (model.Moment, error)
@@ -33,9 +39,13 @@ type Repository interface {
 	UpdateGoalValue(userID, id string, currentValue int) (model.Goal, error)
 	UpdateGoalStatus(userID, id, status string) (model.Goal, error)
 	DeleteGoal(userID, id string) error
+	AddNotice(notice model.Notice) (model.Notice, error)
+	UnreadNotices(userID string) ([]model.Notice, error)
+	MarkNoticesRead(userID string, categories []string) error
 	AdminOverview() (model.AdminOverview, error)
 	AdminRecentUsers(limit int) ([]model.AdminUserSummary, error)
 	AdminRecentCouples(limit int) ([]model.AdminCoupleSummary, error)
+	AdminUnpairCouple(coupleID string) (model.UnpairResult, error)
 }
 
 type Service struct {
@@ -54,6 +64,10 @@ func (s *Service) SyncState(userID string) (model.SyncState, error) {
 	return s.repo.SyncState(userID)
 }
 
+func (s *Service) CoupleForUser(userID string) (model.Couple, error) {
+	return s.repo.CoupleForUser(userID)
+}
+
 func (s *Service) GeneratePairCode(userID string) (model.Couple, error) {
 	return s.repo.GeneratePairCode(userID)
 }
@@ -68,6 +82,10 @@ func (s *Service) UpdateLoveDate(userID string, req *UpdateLoveDateRequest) (mod
 
 func (s *Service) UpdateUserProfile(userID string, req *UserProfileRequest) (model.User, error) {
 	return s.repo.UpdateUserProfile(userID, *req)
+}
+
+func (s *Service) Unpair(userID string) (model.UnpairResult, error) {
+	return s.repo.Unpair(userID)
 }
 
 func (s *Service) Dashboard(userID string) (model.DashboardPayload, error) {
@@ -164,4 +182,49 @@ func (s *Service) UpdateGoalStatus(userID, id string, req *UpdateGoalStatusReque
 
 func (s *Service) DeleteGoal(userID, id string) error {
 	return s.repo.DeleteGoal(userID, id)
+}
+
+func (s *Service) CreatePartnerNotice(userID string, req *CreateNoticeRequest) (model.Notice, error) {
+	userID = strings.TrimSpace(userID)
+	couple, err := s.repo.CoupleForUser(userID)
+	if err != nil {
+		return model.Notice{}, err
+	}
+	recipientID := couple.UserAID
+	if recipientID == userID {
+		recipientID = couple.UserBID
+	}
+	if strings.TrimSpace(recipientID) == "" || recipientID == userID {
+		return model.Notice{}, nil
+	}
+	return s.repo.AddNotice(model.Notice{
+		CoupleID:    couple.ID,
+		RecipientID: recipientID,
+		InitiatorID: userID,
+		Category:    strings.TrimSpace(req.Category),
+		Title:       strings.TrimSpace(req.Title),
+		Content:     strings.TrimSpace(req.Content),
+		Target:      strings.TrimSpace(req.Target),
+	})
+}
+
+func (s *Service) UnreadNotices(userID string) ([]model.Notice, error) {
+	return s.repo.UnreadNotices(userID)
+}
+
+func (s *Service) MarkNoticesRead(userID string, req *MarkNoticesReadRequest) error {
+	categories := make([]string, 0, len(req.Categories))
+	seen := map[string]struct{}{}
+	for _, category := range req.Categories {
+		category = strings.TrimSpace(category)
+		if category == "" {
+			continue
+		}
+		if _, ok := seen[category]; ok {
+			continue
+		}
+		seen[category] = struct{}{}
+		categories = append(categories, category)
+	}
+	return s.repo.MarkNoticesRead(userID, categories)
 }

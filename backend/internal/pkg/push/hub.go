@@ -84,6 +84,33 @@ func (h *Hub) NotifyPairConfirmed(couple domain.Couple) {
 		},
 	}
 
+	h.notifyCoupleUsers(couple, event)
+}
+
+func (h *Hub) NotifyPairUnbound(result domain.UnpairResult) {
+	event := Event{
+		Type: "pair:unbound",
+		Data: gin.H{
+			"coupleId":    result.Couple.ID,
+			"userAId":     result.Couple.UserAID,
+			"userBId":     result.Couple.UserBID,
+			"initiatorId": result.InitiatorID,
+		},
+	}
+	h.notifyCoupleUsers(result.Couple, event)
+}
+
+func (h *Hub) NotifyNotice(notice domain.Notice) {
+	if strings.TrimSpace(notice.RecipientID) == "" {
+		return
+	}
+	h.notifyUser(notice.RecipientID, Event{
+		Type: "app:notice",
+		Data: notice,
+	})
+}
+
+func (h *Hub) notifyCoupleUsers(couple domain.Couple, event Event) {
 	notified := map[string]struct{}{}
 	for _, userID := range []string{couple.UserAID, couple.UserBID} {
 		userID = strings.TrimSpace(userID)

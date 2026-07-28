@@ -11,8 +11,8 @@
       <view class="edit-dot">改</view>
       <view class="profile-text">
         <view class="name">{{users.me.name}}</view>
-        <view class="line">生日：{{users.me.birthday}}</view>
-        <view class="line">微信号：{{users.me.wxid}}</view>
+        <view class="line">生日：{{users.me.birthday || "未填写"}}</view>
+        <view class="line">微信号：{{users.me.wxid || "未填写"}}</view>
       </view>
     </view>
   </view>
@@ -37,6 +37,7 @@
           <text>{{users.partner.name}}</text>
         </view>
       </view>
+      <button bindtap="unbindPair" class="unbind show">解除绑定</button>
     </view>
 
     <view class="section-title">资料设置</view>

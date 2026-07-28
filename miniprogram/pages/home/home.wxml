@@ -11,7 +11,7 @@
         <text>{{users.me.name}}</text>
       </view>
       <view class="days-bubble">
-        <view class="floating-heart">💕</view>
+        <view class="floating-heart">❤</view>
         <text class="days">{{dashboard.loveDays}}</text>
         <text class="unit">天</text>
       </view>
@@ -21,14 +21,14 @@
         <text>{{users.partner.name}}</text>
       </view>
     </view>
-    <view class="since">从 {{dashboard.since}} 相伴至今 ✨</view>
+    <view class="since">从 {{dashboard.since}} 相伴至今</view>
   </view>
 
   <view class="content">
     <view class="date-card card">
       <view class="card-head">
-        <text>🗓️ 重要日期倒计时</text>
-        <text class="more">查看全部 ›</text>
+        <text>重要日期倒计时</text>
+        <text class="more">查看全部</text>
       </view>
       <scroll-view scroll-x class="date-scroll">
         <view wx:for="{{dashboard.anniversaries}}" wx:key="title" class="date-item {{item.tone}}">
@@ -48,31 +48,36 @@
       </view>
     </view>
 
-    <view class="section-title">✨ 功能入口</view>
+    <view class="section-title">功能入口</view>
     <view class="feature-grid">
       <view bindtap="go" data-url="/pages/memory/memory" class="feature pink">
+        <view wx:if="{{unread.memory}}" class="feature-red-dot"></view>
         <view class="feature-icon">📷</view>
         <view class="feature-title">纪念分享</view>
         <view class="feature-desc">记录每个美好瞬间</view>
       </view>
       <view bindtap="go" data-url="/pages/todos/todos" class="feature purple">
-        <view class="feature-icon">✅</view>
-        <view class="feature-title">需做列表</view>
-        <view class="feature-desc">任务分工与审核</view>
+        <view wx:if="{{unread.todos}}" class="feature-red-dot"></view>
+        <view class="feature-icon">✓</view>
+        <view class="feature-title">待办列表</view>
+        <view class="feature-desc">任务分工与确认</view>
       </view>
       <view bindtap="go" data-url="/pages/schedule/schedule" class="feature orange">
+        <view wx:if="{{unread.schedule}}" class="feature-red-dot"></view>
         <view class="feature-icon">⏰</view>
         <view class="feature-title">定时任务</view>
-        <view class="feature-desc">家务提醒不忘事</view>
+        <view class="feature-desc">到点弹窗提醒</view>
       </view>
       <view bindtap="go" data-url="/pages/order/order" class="feature green">
-        <view class="feature-icon">🍜</view>
+        <view wx:if="{{unread.order}}" class="feature-red-dot"></view>
+        <view class="feature-icon">🍽</view>
         <view class="feature-title">今日点餐</view>
         <view class="feature-desc">解决吃什么难题</view>
       </view>
     </view>
 
     <view bindtap="go" data-url="/pages/goal/goals" class="goal-entry">
+      <view wx:if="{{unread.goals}}" class="feature-red-dot"></view>
       <view class="feature-icon">🎯</view>
       <view>
         <view class="feature-title">两人小目标</view>

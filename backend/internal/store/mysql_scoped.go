@@ -33,6 +33,62 @@ func (s *MySQLStore) SyncState(userID string) (domain.SyncState, error) {
 	}, nil
 }
 
+func (s *MySQLStore) CoupleForUser(userID string) (domain.Couple, error) {
+	return s.coupleForUser(userID)
+}
+
+func (s *MySQLStore) AddNotice(notice domain.Notice) (domain.Notice, error) {
+	now := time.Now()
+	row := noticeModel{
+		ID:          firstNonEmpty(strings.TrimSpace(notice.ID), newID("n")),
+		CoupleID:    strings.TrimSpace(notice.CoupleID),
+		RecipientID: strings.TrimSpace(notice.RecipientID),
+		InitiatorID: strings.TrimSpace(notice.InitiatorID),
+		Category:    strings.TrimSpace(notice.Category),
+		Title:       strings.TrimSpace(notice.Title),
+		Content:     strings.TrimSpace(notice.Content),
+		Target:      strings.TrimSpace(notice.Target),
+		ReadAt:      notice.ReadAt,
+		CreatedAt:   now,
+	}
+	if row.CoupleID == "" || row.RecipientID == "" || row.Category == "" || row.Title == "" {
+		return domain.Notice{}, ErrNotFound
+	}
+	if err := s.db.Create(&row).Error; err != nil {
+		return domain.Notice{}, err
+	}
+	return toNotice(row), nil
+}
+
+func (s *MySQLStore) UnreadNoticesForUser(userID string) ([]domain.Notice, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return nil, ErrUnauthorized
+	}
+	var rows []noticeModel
+	if err := s.db.Where("recipient_id = ? AND read_at IS NULL", userID).Order("created_at DESC").Limit(100).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	items := make([]domain.Notice, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, toNotice(row))
+	}
+	return items, nil
+}
+
+func (s *MySQLStore) MarkNoticesReadForUser(userID string, categories []string) error {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return ErrUnauthorized
+	}
+	now := time.Now()
+	tx := s.db.Model(&noticeModel{}).Where("recipient_id = ? AND read_at IS NULL", userID)
+	if len(categories) > 0 {
+		tx = tx.Where("category IN ?", categories)
+	}
+	return tx.Update("read_at", &now).Error
+}
+
 func (s *MySQLStore) UpdateLoveDateForUser(userID, loveDate string) (domain.Couple, error) {
 	couple, err := s.coupleForUser(userID)
 	if err != nil {
@@ -70,6 +126,21 @@ func (s *MySQLStore) UpdateUserProfileForUser(currentUserID string, user domain.
 		}
 	}
 	return updated, nil
+}
+
+func (s *MySQLStore) UnpairForUser(userID string) (domain.UnpairResult, error) {
+	userID = strings.TrimSpace(userID)
+	if userID == "" {
+		return domain.UnpairResult{}, ErrUnauthorized
+	}
+	couple, err := s.coupleForUser(userID)
+	if err != nil {
+		return domain.UnpairResult{}, err
+	}
+	if err := s.unpairCouple(couple.ID); err != nil {
+		return domain.UnpairResult{}, err
+	}
+	return domain.UnpairResult{Couple: couple, InitiatorID: userID}, nil
 }
 
 func (s *MySQLStore) DashboardForUser(userID string) (domain.DashboardPayload, error) {
@@ -552,6 +623,23 @@ func (s *MySQLStore) touchCouple(tx *gorm.DB, coupleID string) error {
 		"updated_at": now,
 		"version":    now.UnixNano(),
 	}).Error
+}
+
+func (s *MySQLStore) unpairCouple(coupleID string) error {
+	now := time.Now()
+	result := s.db.Model(&coupleModel{}).
+		Where("id = ? AND user_b_id <> ''", strings.TrimSpace(coupleID)).
+		Updates(map[string]any{
+			"user_b_id":      "",
+			"pair_code":      "",
+			"code_expire_at": nil,
+			"updated_at":     now,
+			"version":        now.UnixNano(),
+		})
+	if result.Error != nil {
+		return result.Error
+	}
+	return requireAffected(result.RowsAffected)
 }
 
 func (s *MySQLStore) belongsToCouple(model any, id, coupleID string) bool {

@@ -31,6 +31,26 @@ function markPaired() {
   app.globalData.demoMode = false;
 }
 
+function clearPairing() {
+  const app = getApp();
+  const userId = (app && app.globalData && app.globalData.currentUserId) || wx.getStorageSync("currentUserId") || "";
+  wx.setStorageSync("isPaired", false);
+  wx.setStorageSync("demoMode", false);
+  if (userId) {
+    wx.removeStorageSync(`wechatProfileSynced:${userId}`);
+  }
+  if (app && app.globalData) {
+    app.globalData.isPaired = false;
+    app.globalData.demoMode = false;
+    app.globalData.syncState = {
+      paired: false,
+      coupleId: "",
+      version: Date.now(),
+      updatedAt: new Date().toISOString()
+    };
+  }
+}
+
 function guardCouplePage() {
   if (canUseCoupleFeatures()) return true;
   wx.showToast({ title: "请先完成情侣配对", icon: "none" });
@@ -40,6 +60,7 @@ function guardCouplePage() {
 
 module.exports = {
   canUseCoupleFeatures,
+  clearPairing,
   enterDemo,
   guardCouplePage,
   isDemo,

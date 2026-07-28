@@ -13,7 +13,7 @@
       <view class="success-line"></view>
       <view class="success-avatar dark">TA</view>
     </view>
-    <view class="success-note">正在进入首页，一起记录接下来的每一天。</view>
-    <button bindtap="goHome" class="success-btn">进入双人首页</button>
+    <view class="success-note">{{syncText}}</view>
+    <button disabled="{{!canEnterHome || syncingProfile}}" loading="{{syncingProfile}}" bindtap="goHome" class="success-btn">进入双人首页</button>
   </view>
 </view>

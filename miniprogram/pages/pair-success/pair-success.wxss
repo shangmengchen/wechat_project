@@ -97,3 +97,8 @@
   font-weight: 900;
   line-height: 1;
 }
+
+.success-btn[disabled] {
+  opacity: 0.58;
+  box-shadow: none;
+}

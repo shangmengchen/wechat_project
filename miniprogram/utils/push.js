@@ -43,12 +43,20 @@ function start() {
 
   task.onMessage((message) => {
     const event = parseEvent(message && message.data);
-    if (!event || event.type !== "pair:confirmed") {
+    if (!event) {
       return;
     }
     const currentApp = getApp();
-    if (currentApp && typeof currentApp.handlePairConfirmed === "function") {
+    if (event.type === "pair:confirmed" && currentApp && typeof currentApp.handlePairConfirmed === "function") {
       currentApp.handlePairConfirmed(event.data || {});
+      return;
+    }
+    if (event.type === "pair:unbound" && currentApp && typeof currentApp.handlePairUnbound === "function") {
+      currentApp.handlePairUnbound(event.data || {});
+      return;
+    }
+    if (event.type === "app:notice" && currentApp && typeof currentApp.handleAppNotice === "function") {
+      currentApp.handleAppNotice(event.data || {});
     }
   });
 

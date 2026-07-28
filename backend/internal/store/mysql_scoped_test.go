@@ -56,6 +56,54 @@ func TestUpdateUserProfileForUserRejectsOtherUser(t *testing.T) {
 	}
 }
 
+func TestUnpairForUserClearsPairForBothUsers(t *testing.T) {
+	db := openScopedTestDB(t)
+	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)
+	seedScopedFixture(t, db, now)
+
+	store := NewMySQLStore(db)
+	result, err := store.UnpairForUser("u2")
+	if err != nil {
+		t.Fatalf("UnpairForUser: %v", err)
+	}
+	if result.Couple.UserAID != "u1" || result.Couple.UserBID != "u2" || result.InitiatorID != "u2" {
+		t.Fatalf("unexpected unpair result: %+v", result)
+	}
+
+	for _, userID := range []string{"u1", "u2"} {
+		state, err := store.SyncState(userID)
+		if err != nil {
+			t.Fatalf("SyncState(%s): %v", userID, err)
+		}
+		if state.Paired {
+			t.Fatalf("expected %s to be unpaired, got %+v", userID, state)
+		}
+	}
+}
+
+func TestAdminUnpairCoupleClearsPair(t *testing.T) {
+	db := openScopedTestDB(t)
+	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)
+	seedScopedFixture(t, db, now)
+
+	store := NewMySQLStore(db)
+	result, err := store.AdminUnpairCouple("c1")
+	if err != nil {
+		t.Fatalf("AdminUnpairCouple: %v", err)
+	}
+	if result.InitiatorID != "admin" {
+		t.Fatalf("expected admin initiator, got %+v", result)
+	}
+
+	state, err := store.SyncState("u1")
+	if err != nil {
+		t.Fatalf("SyncState: %v", err)
+	}
+	if state.Paired {
+		t.Fatalf("expected unpaired state, got %+v", state)
+	}
+}
+
 func openScopedTestDB(t *testing.T) *gorm.DB {
 	t.Helper()
 	dsn := fmt.Sprintf("file:%s?mode=memory&cache=shared", t.Name())

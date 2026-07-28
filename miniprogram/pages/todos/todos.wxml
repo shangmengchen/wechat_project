@@ -4,7 +4,7 @@
     <text>信号满格</text>
   </view>
   <view class="title-row">
-    <view class="page-title">需做列表 <text>✓</text></view>
+    <view class="page-title">待办列表 <text>✓</text></view>
     <view bindtap="addTask" class="week-pill">+ 新建</view>
   </view>
 
@@ -60,7 +60,7 @@
         <button wx:if="{{active === 'todo'}}" bindtap="complete" data-id="{{item.id}}" class="soft-btn">完成任务</button>
         <view wx:elif="{{active === 'review'}}" class="review-actions">
           <button bindtap="approve" data-id="{{item.id}}" class="pass">✓ 通过</button>
-          <button bindtap="reject" data-id="{{item.id}}" class="reject">X 驳回</button>
+          <button bindtap="reject" data-id="{{item.id}}" class="reject">× 驳回</button>
         </view>
       </view>
     </block>

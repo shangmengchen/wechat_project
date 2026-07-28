@@ -196,11 +196,24 @@
 
 .feature,
 .goal-entry {
+  position: relative;
   min-height: 208rpx;
   border-radius: 28rpx;
   padding: 34rpx;
   color: #ffffff;
   box-shadow: 0 12rpx 24rpx rgba(34, 28, 58, 0.14);
+}
+
+.feature-red-dot {
+  position: absolute;
+  top: 24rpx;
+  right: 24rpx;
+  width: 22rpx;
+  height: 22rpx;
+  border: 4rpx solid rgba(255, 255, 255, 0.78);
+  border-radius: 50%;
+  background: #ff2d55;
+  box-shadow: 0 8rpx 18rpx rgba(255, 45, 85, 0.34);
 }
 
 .feature.pink {

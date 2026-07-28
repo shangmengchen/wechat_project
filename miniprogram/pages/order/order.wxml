@@ -4,7 +4,7 @@
     <text>信号满格</text>
   </view>
   <view class="title-row">
-    <view class="back-dot"></view>
+    <view bindtap="goBack" class="back-dot">‹</view>
     <view class="page-title">今日点餐</view>
     <view></view>
   </view>

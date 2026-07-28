@@ -96,7 +96,14 @@ function fallback(path, data = {}) {
   }
   if (path.includes("/pair/code")) return mock.generatePairCode(data.userId);
   if (path.includes("/pair/confirm")) return mock.confirmPair(data);
+  if (path.includes("/pair/unbind")) {
+    wx.setStorageSync("isPaired", false);
+    wx.setStorageSync("demoMode", false);
+    return { code: 0, data: { initiatorId: data.userId || "" }, message: "已解除绑定" };
+  }
   if (path.includes("/couple/love-date")) return mock.updateLoveDate(data.loveDate);
+  if (path.includes("/notices/unread")) return { code: 0, data: { items: [], counts: {} } };
+  if (path.includes("/notices/read")) return { code: 0, data: { read: true } };
   if (path.includes("/users/") && path.includes("/profile")) {
     const id = path.split("/")[2];
     return mock.updateUserProfile(id, data);
@@ -130,6 +137,10 @@ module.exports = {
   login: (data) => request("/auth/login", { method: "POST", data }),
   getSyncState: () => request(`/sync/state${currentUserQuery()}`),
   generatePairCode: (userId) => request("/pair/code", { method: "POST", data: { userId } }),
+  unbindPair: () => {
+    const app = getApp();
+    return request("/pair/unbind", { method: "POST", data: { userId: app.globalData.currentUserId } });
+  },
   confirmPair: (data) => {
     const app = getApp();
     return request("/pair/confirm", {
@@ -149,6 +160,8 @@ module.exports = {
   },
   updateLoveDate: (loveDate) => request("/couple/love-date", { method: "PATCH", data: { loveDate } }),
   updateUserProfile: (id, data) => request(`/users/${id}/profile`, { method: "PATCH", data }),
+  getUnreadNotices: () => request("/notices/unread"),
+  markNoticesRead: (categories = []) => request("/notices/read", { method: "POST", data: { categories } }),
   getMoments: () => request("/moments"),
   createMoment: (data) => request("/moments", { method: "POST", data }),
   deleteMoment: (id) => request(`/moments/${id}`, { method: "DELETE" }),

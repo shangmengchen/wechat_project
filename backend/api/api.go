@@ -142,6 +142,18 @@ func (api *API) UpdateUserProfile(c *gin.Context) {
 	respond(c, user, err)
 }
 
+func (api *API) Unpair(c *gin.Context) {
+	result, err := api.service.Unpair(httpmw.GetCurrentUserID(c))
+	if err != nil {
+		respond(c, result, err)
+		return
+	}
+	if api.push != nil {
+		api.push.NotifyPairUnbound(result)
+	}
+	ok(c, result)
+}
+
 func (api *API) Dashboard(c *gin.Context) {
 	data, err := api.service.Dashboard(httpmw.GetCurrentUserID(c))
 	respond(c, data, err)
@@ -192,8 +204,14 @@ func (api *API) CreateMoment(c *gin.Context) {
 		return
 	}
 	req.TimeLabel = "just now"
-	data, err := api.service.AddMoment(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddMoment(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "memory", "新的动态", previewText(data.Content, "对方发布了一条新动态"), "/pages/memory/memory")
+	ok(c, data)
 }
 
 func (api *API) DeleteMoment(c *gin.Context) {
@@ -205,8 +223,16 @@ func (api *API) UpdateMomentLiked(c *gin.Context) {
 	if !bindJSON(c, req) {
 		return
 	}
-	data, err := api.service.UpdateMomentLiked(httpmw.GetCurrentUserID(c), c.Param("id"), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.UpdateMomentLiked(userID, c.Param("id"), req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	if req.Liked {
+		api.notifyPartner(userID, "memory", "动态有新互动", "对方喜欢了你的动态", "/pages/memory/memory")
+	}
+	ok(c, data)
 }
 
 func (api *API) Tasks(c *gin.Context) {
@@ -232,8 +258,14 @@ func (api *API) CreateTask(c *gin.Context) {
 	if strings.TrimSpace(req.Tag) == "" {
 		req.Tag = "life"
 	}
-	data, err := api.service.AddTask(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddTask(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "todos", "新的待办任务", previewText(data.Title, "对方新建了一个待办任务"), "/pages/todos/todos")
+	ok(c, data)
 }
 
 func (api *API) DeleteTask(c *gin.Context) {
@@ -242,8 +274,14 @@ func (api *API) DeleteTask(c *gin.Context) {
 
 func (api *API) TaskAction(status model.TaskStatus) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		data, err := api.service.UpdateTaskStatus(httpmw.GetCurrentUserID(c), c.Param("id"), status)
-		respond(c, data, err)
+		userID := httpmw.GetCurrentUserID(c)
+		data, err := api.service.UpdateTaskStatus(userID, c.Param("id"), status)
+		if err != nil {
+			respond(c, data, err)
+			return
+		}
+		api.notifyPartner(userID, "todos", taskNoticeTitle(status), taskNoticeContent(status, data.Title), "/pages/todos/todos")
+		ok(c, data)
 	}
 }
 
@@ -273,8 +311,14 @@ func (api *API) CreateScheduledTask(c *gin.Context) {
 	if req.Next == "" {
 		req.Next = "today " + req.Time
 	}
-	data, err := api.service.AddScheduledTask(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddScheduledTask(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "schedule", "新的定时任务", scheduledNoticeContent(data), "/pages/schedule/schedule")
+	ok(c, data)
 }
 
 func (api *API) DeleteScheduledTask(c *gin.Context) {
@@ -282,8 +326,14 @@ func (api *API) DeleteScheduledTask(c *gin.Context) {
 }
 
 func (api *API) ConfirmScheduledTask(c *gin.Context) {
-	data, err := api.service.ConfirmScheduledTask(httpmw.GetCurrentUserID(c), c.Param("id"))
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.ConfirmScheduledTask(userID, c.Param("id"))
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "schedule", "定时任务已完成", previewText(data.Title, "对方完成了一个定时任务"), "/pages/schedule/schedule")
+	ok(c, data)
 }
 
 func (api *API) Dishes(c *gin.Context) {
@@ -307,8 +357,14 @@ func (api *API) CreateDish(c *gin.Context) {
 		req.Meal = "any"
 	}
 	req.Enabled = true
-	data, err := api.service.AddDish(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddDish(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "order", "新增菜品", previewText(data.Name, "对方新增了一道菜"), "/pages/order/order")
+	ok(c, data)
 }
 
 func (api *API) DeleteDish(c *gin.Context) {
@@ -320,8 +376,14 @@ func (api *API) UpdateDishEnabled(c *gin.Context) {
 	if !bindJSON(c, req) {
 		return
 	}
-	data, err := api.service.UpdateDishEnabled(httpmw.GetCurrentUserID(c), c.Param("id"), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.UpdateDishEnabled(userID, c.Param("id"), req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "order", "菜品状态更新", previewText(data.Name, "对方更新了菜品状态"), "/pages/order/order")
+	ok(c, data)
 }
 
 func (api *API) Orders(c *gin.Context) {
@@ -344,8 +406,14 @@ func (api *API) CreateOrder(c *gin.Context) {
 		badRequest(c, "dishes required")
 		return
 	}
-	data, err := api.service.AddOrder(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddOrder(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "order", "今日点餐更新", orderNoticeContent(data), "/pages/order/order")
+	ok(c, data)
 }
 
 func (api *API) Goals(c *gin.Context) {
@@ -366,8 +434,14 @@ func (api *API) CreateGoal(c *gin.Context) {
 		req.Period = "month"
 	}
 	req.Status = "active"
-	data, err := api.service.AddGoal(httpmw.GetCurrentUserID(c), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.AddGoal(userID, req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "goals", "新的两人小目标", previewText(data.Title, "对方新建了一个小目标"), "/pages/goal/goals")
+	ok(c, data)
 }
 
 func (api *API) UpdateGoalValue(c *gin.Context) {
@@ -379,8 +453,14 @@ func (api *API) UpdateGoalValue(c *gin.Context) {
 		badRequest(c, "currentValue must be >= 0")
 		return
 	}
-	data, err := api.service.UpdateGoalValue(httpmw.GetCurrentUserID(c), c.Param("id"), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.UpdateGoalValue(userID, c.Param("id"), req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "goals", "目标进度更新", goalNoticeContent(data), "/pages/goal/goals")
+	ok(c, data)
 }
 
 func (api *API) UpdateGoalStatus(c *gin.Context) {
@@ -392,12 +472,42 @@ func (api *API) UpdateGoalStatus(c *gin.Context) {
 		badRequest(c, "invalid status")
 		return
 	}
-	data, err := api.service.UpdateGoalStatus(httpmw.GetCurrentUserID(c), c.Param("id"), req)
-	respond(c, data, err)
+	userID := httpmw.GetCurrentUserID(c)
+	data, err := api.service.UpdateGoalStatus(userID, c.Param("id"), req)
+	if err != nil {
+		respond(c, data, err)
+		return
+	}
+	api.notifyPartner(userID, "goals", "目标状态更新", goalNoticeContent(data), "/pages/goal/goals")
+	ok(c, data)
 }
 
 func (api *API) DeleteGoal(c *gin.Context) {
 	respond(c, gin.H{"deleted": true}, api.service.DeleteGoal(httpmw.GetCurrentUserID(c), c.Param("id")))
+}
+
+func (api *API) UnreadNotices(c *gin.Context) {
+	items, err := api.service.UnreadNotices(httpmw.GetCurrentUserID(c))
+	if err != nil {
+		respond(c, nil, err)
+		return
+	}
+	ok(c, gin.H{
+		"items":  items,
+		"counts": noticeCounts(items),
+	})
+}
+
+func (api *API) MarkNoticesRead(c *gin.Context) {
+	req := &service.MarkNoticesReadRequest{}
+	if !bindJSON(c, req) {
+		return
+	}
+	if err := api.service.MarkNoticesRead(httpmw.GetCurrentUserID(c), req); err != nil {
+		respond(c, nil, err)
+		return
+	}
+	ok(c, gin.H{"read": true})
 }
 
 func (api *API) exchangeOpenID(ctx context.Context, code string) (wechatcli.Session, error) {
@@ -409,6 +519,90 @@ func (api *API) exchangeOpenID(ctx context.Context, code string) (wechatcli.Sess
 		return wechatcli.Session{}, fmt.Errorf("login code required")
 	}
 	return wechatcli.Session{OpenID: "mock-openid-" + code}, nil
+}
+
+func (api *API) notifyPartner(userID, category, title, content, target string) {
+	if api == nil || api.service == nil {
+		return
+	}
+	notice, err := api.service.CreatePartnerNotice(userID, &service.CreateNoticeRequest{
+		Category: category,
+		Title:    title,
+		Content:  content,
+		Target:   target,
+	})
+	if err != nil || strings.TrimSpace(notice.ID) == "" {
+		return
+	}
+	if api.push != nil {
+		api.push.NotifyNotice(notice)
+	}
+}
+
+func noticeCounts(items []model.Notice) map[string]int {
+	counts := map[string]int{}
+	for _, item := range items {
+		category := strings.TrimSpace(item.Category)
+		if category == "" {
+			continue
+		}
+		counts[category]++
+	}
+	return counts
+}
+
+func previewText(value, fallback string) string {
+	text := strings.TrimSpace(value)
+	if text == "" {
+		return fallback
+	}
+	runes := []rune(text)
+	if len(runes) > 32 {
+		return string(runes[:32]) + "..."
+	}
+	return text
+}
+
+func scheduledNoticeContent(task model.ScheduledTask) string {
+	title := previewText(task.Title, "对方新建了一个定时任务")
+	if strings.TrimSpace(task.Time) == "" {
+		return title
+	}
+	return fmt.Sprintf("%s，提醒时间 %s", title, task.Time)
+}
+
+func orderNoticeContent(order model.Order) string {
+	if len(order.Dishes) == 0 {
+		return "对方保存了今日点餐"
+	}
+	return previewText(strings.Join(order.Dishes, "、"), "对方保存了今日点餐")
+}
+
+func goalNoticeContent(goal model.Goal) string {
+	return fmt.Sprintf("%s：%d%%", previewText(goal.Title, "两人小目标有更新"), goal.Progress)
+}
+
+func taskNoticeTitle(status model.TaskStatus) string {
+	switch status {
+	case model.TaskReview:
+		return "待办等待确认"
+	case model.TaskDone:
+		return "待办已完成"
+	default:
+		return "待办被驳回"
+	}
+}
+
+func taskNoticeContent(status model.TaskStatus, title string) string {
+	text := previewText(title, "一个待办任务")
+	switch status {
+	case model.TaskReview:
+		return text + " 已提交确认"
+	case model.TaskDone:
+		return text + " 已确认完成"
+	default:
+		return text + " 被驳回，需要重新处理"
+	}
 }
 
 func absoluteURL(c *gin.Context, path string) string {

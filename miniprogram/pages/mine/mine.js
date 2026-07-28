@@ -108,6 +108,36 @@ Page({
     wx.showToast({ title: "当前微信版本不支持", icon: "none" });
   },
 
+  unbindPair() {
+    wx.showModal({
+      title: "解除绑定",
+      content: "解除后双方都会回到分享码匹配界面，历史记录会保留但暂时不可见。确认解除吗？",
+      confirmText: "确认解除",
+      confirmColor: "#ff3867",
+      success: (res) => {
+        if (!res.confirm) return;
+        api.unbindPair().then((ret) => {
+          if (ret && ret.code !== undefined && ret.code !== 0) {
+            wx.showToast({ title: ret.message || "解除失败", icon: "none" });
+            return;
+          }
+          wx.showToast({ title: "已解除绑定", icon: "success" });
+          const app = getApp();
+          if (app && typeof app.handlePairUnbound === "function") {
+            app.handlePairUnbound({
+              initiatorId: app.globalData.currentUserId,
+              silent: true,
+              wasPaired: true
+            });
+          } else {
+            session.clearPairing();
+            wx.reLaunch({ url: "/pages/pair/pair" });
+          }
+        });
+      }
+    });
+  },
+
   updateProfile(patch) {
     const me = this.data.users.me;
     const next = {
