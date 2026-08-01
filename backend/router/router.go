@@ -23,8 +23,9 @@ func SetRouter(svc *service.Service) *gin.Engine {
 	pushHub := push.NewHub()
 	handler := api.New(svc, wechatcli.NewClient(cfg.WeChatConfig.AppID, cfg.WeChatConfig.Secret), pushHub)
 	r := gin.New()
+	r.MaxMultipartMemory = 8 << 20
 	_ = r.SetTrustedProxies(nil)
-	r.Use(httpmw.RequestID(), httpmw.AccessLog(), httpmw.Recovery(), cors())
+	r.Use(httpmw.RequestID(), httpmw.AccessLog(), httpmw.Recovery(), securityHeaders(), cors())
 	r.Static("/uploads", "./uploads")
 
 	r.GET("/healthz", handler.Health)
@@ -104,6 +105,13 @@ func cors() gin.HandlerFunc {
 			c.AbortWithStatus(http.StatusNoContent)
 			return
 		}
+		c.Next()
+	}
+}
+
+func securityHeaders() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.Writer.Header().Set("X-Content-Type-Options", "nosniff")
 		c.Next()
 	}
 }

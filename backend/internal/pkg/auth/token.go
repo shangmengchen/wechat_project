@@ -3,6 +3,7 @@ package auth
 import (
 	"crypto/hmac"
 	"crypto/sha256"
+	"crypto/subtle"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -47,7 +48,7 @@ func ParseToken(secret, token string) (Claims, error) {
 	}
 	body := parts[0]
 	signature := parts[1]
-	if sign(secret, body) != signature {
+	if subtle.ConstantTimeCompare([]byte(sign(secret, body)), []byte(signature)) != 1 {
 		return Claims{}, ErrInvalidToken
 	}
 	raw, err := base64.RawURLEncoding.DecodeString(body)

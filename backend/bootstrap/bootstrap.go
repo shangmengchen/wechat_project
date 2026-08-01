@@ -17,6 +17,9 @@ import (
 func Run() error {
 	configs.InitGlobalConfig()
 	cfg := configs.GetGlobalConfig()
+	if err := configs.ValidateForStartup(cfg); err != nil {
+		return fmt.Errorf("validate config: %w", err)
+	}
 
 	if err := applog.Init(cfg.LogConfig); err != nil {
 		return fmt.Errorf("init logger: %w", err)

@@ -8,6 +8,7 @@ import (
 	"math"
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 
 	"couple-mini/backend/internal/domain"
@@ -26,7 +27,8 @@ var (
 const pairCodeTTL = 20 * time.Minute
 
 type MySQLStore struct {
-	db *gorm.DB
+	db     *gorm.DB
+	pairMu sync.Mutex
 }
 
 func NewMySQLStore(db *gorm.DB) *MySQLStore {
@@ -137,64 +139,85 @@ func (s *MySQLStore) Login(userID, openid, nickname, avatar string) (domain.User
 }
 
 func (s *MySQLStore) GeneratePairCode(userID string) (domain.Couple, error) {
-	now := time.Now()
+	s.pairMu.Lock()
+	defer s.pairMu.Unlock()
 
-	var pending coupleModel
-	err := s.db.Where("user_a_id = ? AND user_b_id = ''", userID).Order("created_at DESC").Take(&pending).Error
-	if err == nil {
-		if pending.PairCode != "" && pending.CodeExpireAt != nil && pending.CodeExpireAt.After(now) {
-			return toCouple(pending), nil
+	now := time.Now()
+	var result domain.Couple
+
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		var pending coupleModel
+		err := tx.Where("user_a_id = ? AND user_b_id = ''", userID).Order("created_at DESC").Take(&pending).Error
+		if err == nil {
+			if pending.PairCode != "" && pending.CodeExpireAt != nil && pending.CodeExpireAt.After(now) {
+				result = toCouple(pending)
+				return nil
+			}
+
+			code, err := s.uniquePairCode(tx)
+			if err != nil {
+				return err
+			}
+			expireAt := now.Add(pairCodeTTL)
+			updates := map[string]any{
+				"pair_code":      code,
+				"code_expire_at": expireAt,
+				"version":        now.UnixNano(),
+				"updated_at":     now,
+			}
+			update := tx.Model(&coupleModel{}).Where("id = ?", pending.ID).Updates(updates)
+			if update.Error != nil {
+				return update.Error
+			}
+			if err := requireAffected(update.RowsAffected); err != nil {
+				return err
+			}
+			pending.PairCode = code
+			pending.CodeExpireAt = &expireAt
+			pending.Version = now.UnixNano()
+			pending.UpdatedAt = now
+			result = toCouple(pending)
+			return nil
+		}
+		if !errors.Is(err, gorm.ErrRecordNotFound) {
+			return err
 		}
 
-		code, err := s.uniquePairCode()
+		paired, err := s.countModelWithDB(tx, &coupleModel{}, "(user_a_id = ? OR user_b_id = ?) AND user_b_id <> ''", userID, userID)
 		if err != nil {
-			return domain.Couple{}, err
+			return err
+		}
+		if paired > 0 {
+			return ErrAlreadyPaired
+		}
+
+		code, err := s.uniquePairCode(tx)
+		if err != nil {
+			return err
 		}
 		expireAt := now.Add(pairCodeTTL)
-		updates := map[string]any{
-			"pair_code":      code,
-			"code_expire_at": expireAt,
-			"version":        time.Now().UnixNano(),
-			"updated_at":     time.Now(),
-		}
-		if err := s.db.Model(&coupleModel{}).Where("id = ?", pending.ID).Updates(updates).Error; err != nil {
-			return domain.Couple{}, err
-		}
-		return s.coupleByID(pending.ID)
-	}
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.Couple{}, err
-	}
 
-	paired, err := s.countCouples("(user_a_id = ? OR user_b_id = ?) AND user_b_id <> ''", userID, userID)
+		couple := coupleModel{
+			ID:           newID("c"),
+			UserAID:      userID,
+			UserBID:      "",
+			LoveDate:     now.Format("2006-01-02"),
+			PairCode:     code,
+			CodeExpireAt: &expireAt,
+			CreatedAt:    now,
+			UpdatedAt:    now,
+			Version:      now.UnixNano(),
+		}
+		if err := tx.Create(&couple).Error; err != nil {
+			return err
+		}
+		result = toCouple(couple)
+		return nil
+	})
 	if err != nil {
 		return domain.Couple{}, err
 	}
-	if paired > 0 {
-		return domain.Couple{}, ErrAlreadyPaired
-	}
-
-	code, err := s.uniquePairCode()
-	if err != nil {
-		return domain.Couple{}, err
-	}
-	expireAt := now.Add(pairCodeTTL)
-
-	couple := coupleModel{
-		ID:           newID("c"),
-		UserAID:      userID,
-		UserBID:      "",
-		LoveDate:     time.Now().Format("2006-01-02"),
-		PairCode:     code,
-		CodeExpireAt: &expireAt,
-		CreatedAt:    time.Now(),
-		UpdatedAt:    time.Now(),
-		Version:      time.Now().UnixNano(),
-	}
-	if err := s.db.Create(&couple).Error; err != nil {
-		return domain.Couple{}, err
-	}
-	return toCouple(couple), nil
+	return result, nil
 }
 
 func (s *MySQLStore) PairByCode(userID, code, loveDate string) (domain.Couple, error) {
@@ -209,48 +232,66 @@ func (s *MySQLStore) PairByCode(userID, code, loveDate string) (domain.Couple, e
 		return domain.Couple{}, err
 	}
 
-	paired, err := s.countCouples("(user_a_id = ? OR user_b_id = ?) AND user_b_id <> ''", userID, userID)
+	s.pairMu.Lock()
+	defer s.pairMu.Unlock()
+
+	var result domain.Couple
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		paired, err := s.countModelWithDB(tx, &coupleModel{}, "(user_a_id = ? OR user_b_id = ?) AND user_b_id <> ''", userID, userID)
+		if err != nil {
+			return err
+		}
+		if paired > 0 {
+			return ErrAlreadyPaired
+		}
+
+		var couple coupleModel
+		err = tx.Where("pair_code = ?", code).Take(&couple).Error
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return ErrInvalidPairCode
+		}
+		if err != nil {
+			return err
+		}
+		if couple.UserAID == userID {
+			return ErrInvalidPairCode
+		}
+		if couple.UserBID != "" {
+			return ErrAlreadyPaired
+		}
+		if couple.CodeExpireAt == nil || !couple.CodeExpireAt.After(time.Now()) {
+			return ErrPairCodeExpired
+		}
+
+		now := time.Now()
+		updates := map[string]any{
+			"user_b_id":      userID,
+			"love_date":      loveDate,
+			"pair_code":      "",
+			"code_expire_at": nil,
+			"version":        now.UnixNano(),
+			"updated_at":     now,
+		}
+		update := tx.Model(&coupleModel{}).Where("id = ? AND user_b_id = '' AND pair_code = ?", couple.ID, code).Updates(updates)
+		if update.Error != nil {
+			return update.Error
+		}
+		if err := requireAffected(update.RowsAffected); err != nil {
+			return err
+		}
+		couple.UserBID = userID
+		couple.LoveDate = loveDate
+		couple.PairCode = ""
+		couple.CodeExpireAt = nil
+		couple.Version = now.UnixNano()
+		couple.UpdatedAt = now
+		result = toCouple(couple)
+		return nil
+	})
 	if err != nil {
 		return domain.Couple{}, err
 	}
-	if paired > 0 {
-		return domain.Couple{}, ErrAlreadyPaired
-	}
-
-	var couple coupleModel
-	err = s.db.Where("pair_code = ?", code).Take(&couple).Error
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return domain.Couple{}, ErrInvalidPairCode
-	}
-	if err != nil {
-		return domain.Couple{}, err
-	}
-	if couple.UserAID == userID {
-		return domain.Couple{}, ErrInvalidPairCode
-	}
-	if couple.UserBID != "" {
-		return domain.Couple{}, ErrAlreadyPaired
-	}
-	if couple.CodeExpireAt == nil || !couple.CodeExpireAt.After(time.Now()) {
-		return domain.Couple{}, ErrPairCodeExpired
-	}
-
-	updates := map[string]any{
-		"user_b_id":      userID,
-		"love_date":      loveDate,
-		"pair_code":      "",
-		"code_expire_at": nil,
-		"version":        time.Now().UnixNano(),
-		"updated_at":     time.Now(),
-	}
-	result := s.db.Model(&coupleModel{}).Where("id = ? AND user_b_id = '' AND pair_code = ?", couple.ID, code).Updates(updates)
-	if result.Error != nil {
-		return domain.Couple{}, result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return domain.Couple{}, err
-	}
-	return s.coupleByID(couple.ID)
+	return result, nil
 }
 
 func (s *MySQLStore) UpdateLoveDate(loveDate string) (domain.Couple, error) {
@@ -587,43 +628,7 @@ func (s *MySQLStore) Goals() ([]domain.Goal, error) {
 }
 
 func (s *MySQLStore) AddGoal(goal domain.Goal) (domain.Goal, error) {
-	row := goalModel{
-		ID:           newID("g"),
-		CoupleID:     defaultCouple(goal.CoupleID),
-		Title:        goal.Title,
-		Period:       goal.Period,
-		TargetValue:  goal.TargetValue,
-		CurrentValue: goal.CurrentValue,
-		StartDate:    goal.StartDate,
-		TargetDate:   goal.TargetDate,
-		Progress:     goal.Progress,
-		RemainDays:   goal.RemainDays,
-		Status:       goal.Status,
-		CreatedAt:    time.Now(),
-	}
-	if row.TargetValue <= 0 {
-		row.TargetValue = 100
-	}
-	if strings.TrimSpace(row.StartDate) == "" {
-		row.StartDate = time.Now().Format("2006-01-02")
-	}
-	if strings.TrimSpace(row.TargetDate) == "" {
-		row.TargetDate = time.Now().AddDate(0, 0, 30).Format("2006-01-02")
-	}
-	goal = calculateGoal(toGoal(row))
-	row = fromGoal(goal)
-	row.ID = goal.ID
-	row.CoupleID = goal.CoupleID
-	row.Title = goal.Title
-	row.Period = goal.Period
-	row.TargetValue = goal.TargetValue
-	row.CurrentValue = goal.CurrentValue
-	row.StartDate = goal.StartDate
-	row.TargetDate = goal.TargetDate
-	row.Progress = goal.Progress
-	row.RemainDays = goal.RemainDays
-	row.Status = goal.Status
-	row.CreatedAt = time.Now()
+	row := buildGoalModel(goal)
 	if err := s.db.Create(&row).Error; err != nil {
 		return domain.Goal{}, err
 	}
@@ -1008,12 +1013,16 @@ func (s *MySQLStore) orderDishes(orderID string) ([]string, error) {
 }
 
 func (s *MySQLStore) countModel(model any, where string, args ...any) (int, error) {
+	return s.countModelWithDB(s.db, model, where, args...)
+}
+
+func (s *MySQLStore) countModelWithDB(tx *gorm.DB, model any, where string, args ...any) (int, error) {
 	var total int64
-	tx := s.db.Model(model)
+	query := tx.Model(model)
 	if where != "" {
-		tx = tx.Where(where, args...)
+		query = query.Where(where, args...)
 	}
-	if err := tx.Count(&total).Error; err != nil {
+	if err := query.Count(&total).Error; err != nil {
 		return 0, err
 	}
 	return int(total), nil
@@ -1034,10 +1043,10 @@ func (s *MySQLStore) averageGoalProgress(coupleID string) (int, error) {
 	return int(math.Round(avg.Float64)), nil
 }
 
-func (s *MySQLStore) uniquePairCode() (string, error) {
+func (s *MySQLStore) uniquePairCode(tx *gorm.DB) (string, error) {
 	for i := 0; i < 10; i++ {
 		code := fmt.Sprintf("%06d", rand.Intn(900000)+100000)
-		total, err := s.countModel(&coupleModel{}, "pair_code = ? AND code_expire_at > ?", code, time.Now())
+		total, err := s.countModelWithDB(tx, &coupleModel{}, "pair_code = ? AND code_expire_at > ?", code, time.Now())
 		if err != nil {
 			return "", err
 		}
@@ -1046,6 +1055,37 @@ func (s *MySQLStore) uniquePairCode() (string, error) {
 		}
 	}
 	return "", errors.New("failed to generate unique pair code")
+}
+
+func buildGoalModel(goal domain.Goal) goalModel {
+	now := time.Now()
+	row := goalModel{
+		ID:           firstNonEmpty(strings.TrimSpace(goal.ID), newID("g")),
+		CoupleID:     defaultCouple(goal.CoupleID),
+		Title:        goal.Title,
+		Period:       goal.Period,
+		TargetValue:  goal.TargetValue,
+		CurrentValue: goal.CurrentValue,
+		StartDate:    goal.StartDate,
+		TargetDate:   goal.TargetDate,
+		Progress:     goal.Progress,
+		RemainDays:   goal.RemainDays,
+		Status:       goal.Status,
+		CreatedAt:    now,
+	}
+	if row.TargetValue <= 0 {
+		row.TargetValue = 100
+	}
+	if strings.TrimSpace(row.StartDate) == "" {
+		row.StartDate = now.Format("2006-01-02")
+	}
+	if strings.TrimSpace(row.TargetDate) == "" {
+		row.TargetDate = now.AddDate(0, 0, 30).Format("2006-01-02")
+	}
+	goal = calculateGoal(toGoal(row))
+	row = fromGoal(goal)
+	row.CreatedAt = now
+	return row
 }
 
 func requireAffected(rows int64) error {

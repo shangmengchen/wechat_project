@@ -124,14 +124,37 @@ func (s *MySQLStore) UpdateUserProfileForUser(currentUserID string, user domain.
 	if strings.TrimSpace(currentUserID) == "" || strings.TrimSpace(currentUserID) != strings.TrimSpace(user.ID) {
 		return domain.User{}, ErrUnauthorized
 	}
-	updated, err := s.UpdateUserProfile(user)
+	var updated domain.User
+	err := s.db.Transaction(func(tx *gorm.DB) error {
+		if birthday, ok := parseBirthday(user.Birthday); ok {
+			user.Birthday = formatMonthDay(birthday)
+		}
+		result := tx.Model(&userModel{}).Where("id = ?", user.ID).Updates(map[string]any{
+			"nickname": user.Nickname,
+			"avatar":   user.Avatar,
+			"birthday": user.Birthday,
+			"wxid":     user.WxID,
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		if couple, err := s.coupleForUser(currentUserID); err == nil {
+			if err := s.touchCouple(tx, couple.ID); err != nil {
+				return err
+			}
+		}
+		var row userModel
+		if err := tx.Where("id = ?", user.ID).Take(&row).Error; err != nil {
+			return err
+		}
+		updated = toUser(row)
+		return nil
+	})
 	if err != nil {
 		return domain.User{}, err
-	}
-	if couple, err := s.coupleForUser(currentUserID); err == nil {
-		if err := s.touchCouple(s.db, couple.ID); err != nil {
-			return domain.User{}, err
-		}
 	}
 	return updated, nil
 }
@@ -218,10 +241,12 @@ func (s *MySQLStore) AddMomentForUser(userID string, moment domain.Moment) (doma
 		Liked:     moment.Liked,
 		CreatedAt: time.Now(),
 	}
-	if err := s.db.Create(&row).Error; err != nil {
-		return domain.Moment{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Moment{}, err
 	}
 	return toMoment(row), nil
@@ -232,14 +257,16 @@ func (s *MySQLStore) DeleteMomentForUser(userID, id string) error {
 	if err != nil {
 		return err
 	}
-	result := s.db.Delete(&momentModel{}, "id = ? AND couple_id = ?", id, couple.ID)
-	if result.Error != nil {
-		return result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return err
-	}
-	return s.touchCouple(s.db, couple.ID)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&momentModel{}, "id = ? AND couple_id = ?", id, couple.ID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	})
 }
 
 func (s *MySQLStore) UpdateMomentLikedForUser(userID, id string, liked bool) (domain.Moment, error) {
@@ -247,14 +274,16 @@ func (s *MySQLStore) UpdateMomentLikedForUser(userID, id string, liked bool) (do
 	if err != nil {
 		return domain.Moment{}, err
 	}
-	result := s.db.Model(&momentModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("liked", liked)
-	if result.Error != nil {
-		return domain.Moment{}, result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return domain.Moment{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&momentModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("liked", liked)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Moment{}, err
 	}
 	return s.moment(id)
@@ -293,10 +322,12 @@ func (s *MySQLStore) AddTaskForUser(userID string, task domain.Task) (domain.Tas
 		Status:    domain.TaskTodo,
 		CreatedAt: time.Now(),
 	}
-	if err := s.db.Create(&row).Error; err != nil {
-		return domain.Task{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Task{}, err
 	}
 	return toTask(row), nil
@@ -307,14 +338,16 @@ func (s *MySQLStore) DeleteTaskForUser(userID, id string) error {
 	if err != nil {
 		return err
 	}
-	result := s.db.Delete(&taskModel{}, "id = ? AND couple_id = ?", id, couple.ID)
-	if result.Error != nil {
-		return result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return err
-	}
-	return s.touchCouple(s.db, couple.ID)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&taskModel{}, "id = ? AND couple_id = ?", id, couple.ID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	})
 }
 
 func (s *MySQLStore) UpdateTaskStatusForUser(userID, id string, status domain.TaskStatus) (domain.Task, error) {
@@ -322,14 +355,16 @@ func (s *MySQLStore) UpdateTaskStatusForUser(userID, id string, status domain.Ta
 	if err != nil {
 		return domain.Task{}, err
 	}
-	result := s.db.Model(&taskModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("status", status)
-	if result.Error != nil {
-		return domain.Task{}, result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return domain.Task{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&taskModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("status", status)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Task{}, err
 	}
 	return s.task(id)
@@ -367,10 +402,12 @@ func (s *MySQLStore) AddScheduledTaskForUser(userID string, task domain.Schedule
 		Pending:   true,
 		CreatedAt: time.Now(),
 	}
-	if err := s.db.Create(&row).Error; err != nil {
-		return domain.ScheduledTask{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.ScheduledTask{}, err
 	}
 	return toScheduledTask(row), nil
@@ -381,14 +418,16 @@ func (s *MySQLStore) DeleteScheduledTaskForUser(userID, id string) error {
 	if err != nil {
 		return err
 	}
-	result := s.db.Delete(&scheduledTaskModel{}, "id = ? AND couple_id = ?", id, couple.ID)
-	if result.Error != nil {
-		return result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return err
-	}
-	return s.touchCouple(s.db, couple.ID)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&scheduledTaskModel{}, "id = ? AND couple_id = ?", id, couple.ID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	})
 }
 
 func (s *MySQLStore) ConfirmScheduledTaskForUser(userID, id string) (domain.ScheduledTask, error) {
@@ -396,14 +435,16 @@ func (s *MySQLStore) ConfirmScheduledTaskForUser(userID, id string) (domain.Sche
 	if err != nil {
 		return domain.ScheduledTask{}, err
 	}
-	result := s.db.Model(&scheduledTaskModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("pending", false)
-	if result.Error != nil {
-		return domain.ScheduledTask{}, result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return domain.ScheduledTask{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&scheduledTaskModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("pending", false)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.ScheduledTask{}, err
 	}
 	return s.scheduledTask(id)
@@ -439,10 +480,12 @@ func (s *MySQLStore) AddDishForUser(userID string, dish domain.Dish) (domain.Dis
 		Enabled:   dish.Enabled,
 		CreatedAt: time.Now(),
 	}
-	if err := s.db.Create(&row).Error; err != nil {
-		return domain.Dish{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Dish{}, err
 	}
 	return toDish(row), nil
@@ -453,14 +496,16 @@ func (s *MySQLStore) DeleteDishForUser(userID, id string) error {
 	if err != nil {
 		return err
 	}
-	result := s.db.Delete(&dishModel{}, "id = ? AND couple_id = ?", id, couple.ID)
-	if result.Error != nil {
-		return result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return err
-	}
-	return s.touchCouple(s.db, couple.ID)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&dishModel{}, "id = ? AND couple_id = ?", id, couple.ID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	})
 }
 
 func (s *MySQLStore) UpdateDishEnabledForUser(userID, id string, enabled bool) (domain.Dish, error) {
@@ -468,14 +513,16 @@ func (s *MySQLStore) UpdateDishEnabledForUser(userID, id string, enabled bool) (
 	if err != nil {
 		return domain.Dish{}, err
 	}
-	result := s.db.Model(&dishModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("enabled", enabled)
-	if result.Error != nil {
-		return domain.Dish{}, result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return domain.Dish{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Model(&dishModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Update("enabled", enabled)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Dish{}, err
 	}
 	return s.dish(id)
@@ -564,14 +611,16 @@ func (s *MySQLStore) AddGoalForUser(userID string, goal domain.Goal) (domain.Goa
 		return domain.Goal{}, err
 	}
 	goal.CoupleID = couple.ID
-	created, err := s.AddGoal(goal)
-	if err != nil {
+	row := buildGoalModel(goal)
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(&row).Error; err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	}); err != nil {
 		return domain.Goal{}, err
 	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
-		return domain.Goal{}, err
-	}
-	return created, nil
+	return calculateGoal(toGoal(row)), nil
 }
 
 func (s *MySQLStore) UpdateGoalValueForUser(userID, id string, currentValue int) (domain.Goal, error) {
@@ -579,14 +628,37 @@ func (s *MySQLStore) UpdateGoalValueForUser(userID, id string, currentValue int)
 	if err != nil {
 		return domain.Goal{}, err
 	}
-	if !s.belongsToCouple(&goalModel{}, id, couple.ID) {
-		return domain.Goal{}, ErrNotFound
-	}
-	updated, err := s.UpdateGoalValue(id, currentValue)
-	if err != nil {
-		return domain.Goal{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	var updated domain.Goal
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		var row goalModel
+		err := tx.Where("id = ? AND couple_id = ?", id, couple.ID).Take(&row).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		goal := calculateGoal(toGoal(row))
+		goal.CurrentValue = currentValue
+		goal = calculateGoal(goal)
+		result := tx.Model(&goalModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Updates(map[string]any{
+			"current_value": goal.CurrentValue,
+			"progress":      goal.Progress,
+			"remain_days":   goal.RemainDays,
+			"status":        goal.Status,
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		if err := s.touchCouple(tx, couple.ID); err != nil {
+			return err
+		}
+		updated = goal
+		return nil
+	}); err != nil {
 		return domain.Goal{}, err
 	}
 	return updated, nil
@@ -597,14 +669,40 @@ func (s *MySQLStore) UpdateGoalStatusForUser(userID, id, status string) (domain.
 	if err != nil {
 		return domain.Goal{}, err
 	}
-	if !s.belongsToCouple(&goalModel{}, id, couple.ID) {
-		return domain.Goal{}, ErrNotFound
-	}
-	updated, err := s.UpdateGoalStatus(id, status)
-	if err != nil {
-		return domain.Goal{}, err
-	}
-	if err := s.touchCouple(s.db, couple.ID); err != nil {
+	var updated domain.Goal
+	if err := s.db.Transaction(func(tx *gorm.DB) error {
+		var row goalModel
+		err := tx.Where("id = ? AND couple_id = ?", id, couple.ID).Take(&row).Error
+		if err != nil {
+			if err == gorm.ErrRecordNotFound {
+				return ErrNotFound
+			}
+			return err
+		}
+		goal := calculateGoal(toGoal(row))
+		goal.Status = status
+		if status == "done" {
+			goal.CurrentValue = goal.TargetValue
+		}
+		goal = calculateGoal(goal)
+		result := tx.Model(&goalModel{}).Where("id = ? AND couple_id = ?", id, couple.ID).Updates(map[string]any{
+			"status":        goal.Status,
+			"current_value": goal.CurrentValue,
+			"progress":      goal.Progress,
+			"remain_days":   goal.RemainDays,
+		})
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		if err := s.touchCouple(tx, couple.ID); err != nil {
+			return err
+		}
+		updated = goal
+		return nil
+	}); err != nil {
 		return domain.Goal{}, err
 	}
 	return updated, nil
@@ -615,14 +713,16 @@ func (s *MySQLStore) DeleteGoalForUser(userID, id string) error {
 	if err != nil {
 		return err
 	}
-	result := s.db.Delete(&goalModel{}, "id = ? AND couple_id = ?", id, couple.ID)
-	if result.Error != nil {
-		return result.Error
-	}
-	if err := requireAffected(result.RowsAffected); err != nil {
-		return err
-	}
-	return s.touchCouple(s.db, couple.ID)
+	return s.db.Transaction(func(tx *gorm.DB) error {
+		result := tx.Delete(&goalModel{}, "id = ? AND couple_id = ?", id, couple.ID)
+		if result.Error != nil {
+			return result.Error
+		}
+		if err := requireAffected(result.RowsAffected); err != nil {
+			return err
+		}
+		return s.touchCouple(tx, couple.ID)
+	})
 }
 
 func (s *MySQLStore) touchCouple(tx *gorm.DB, coupleID string) error {

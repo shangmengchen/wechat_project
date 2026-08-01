@@ -1,6 +1,7 @@
 package configs
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -94,6 +95,22 @@ func InitGlobalConfig() {
 func GetGlobalConfig() GlobalConfig {
 	InitGlobalConfig()
 	return globalConfig
+}
+
+func ValidateForStartup(cfg GlobalConfig) error {
+	if strings.ToLower(strings.TrimSpace(cfg.AppConfig.RunMode)) != "release" {
+		return nil
+	}
+	if cfg.AuthConfig.TokenSecret == "" || cfg.AuthConfig.TokenSecret == "change-me-token-secret" {
+		return fmt.Errorf("AUTH_TOKEN_SECRET must be set to a non-default value in release mode")
+	}
+	if cfg.AdminConfig.Enabled && (cfg.AdminConfig.Password == "" || cfg.AdminConfig.Password == "admin123456") {
+		return fmt.Errorf("ADMIN_PASSWORD must be set to a non-default value in release mode")
+	}
+	if !hasEnv("MYSQL_DSN") && cfg.DbConfig.Password == "password" {
+		return fmt.Errorf("MYSQL_PASSWORD must be set to a non-default value in release mode")
+	}
+	return nil
 }
 
 func defaultConfig() GlobalConfig {

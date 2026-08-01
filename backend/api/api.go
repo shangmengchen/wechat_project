@@ -3,6 +3,8 @@ package api
 import (
 	"context"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -20,6 +22,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 )
+
+const maxImageUploadBytes = 5 << 20
 
 type API struct {
 	service      *service.Service
@@ -165,6 +169,10 @@ func (api *API) UploadImage(c *gin.Context) {
 		badRequest(c, "file required")
 		return
 	}
+	if file.Size <= 0 || file.Size > maxImageUploadBytes {
+		badRequest(c, "image size must be between 1 byte and 5MB")
+		return
+	}
 	ext := strings.ToLower(filepath.Ext(file.Filename))
 	if ext == "" {
 		ext = ".jpg"
@@ -173,6 +181,10 @@ func (api *API) UploadImage(c *gin.Context) {
 	case ".jpg", ".jpeg", ".png", ".gif", ".webp":
 	default:
 		badRequest(c, "unsupported image type")
+		return
+	}
+	if !validImageContent(file, ext) {
+		badRequest(c, "invalid image content")
 		return
 	}
 	dir := filepath.Join("uploads", "images")
@@ -187,6 +199,39 @@ func (api *API) UploadImage(c *gin.Context) {
 		return
 	}
 	ok(c, gin.H{"url": absoluteURL(c, relative)})
+}
+
+func validImageContent(fileHeader *multipart.FileHeader, ext string) bool {
+	file, err := fileHeader.Open()
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+
+	var header [512]byte
+	n, err := file.Read(header[:])
+	if err != nil && err != io.EOF {
+		return false
+	}
+	contentType := http.DetectContentType(header[:n])
+	switch ext {
+	case ".jpg", ".jpeg":
+		return contentType == "image/jpeg"
+	case ".png":
+		return contentType == "image/png"
+	case ".gif":
+		return contentType == "image/gif"
+	case ".webp":
+		return isWebP(header[:n])
+	default:
+		return false
+	}
+}
+
+func isWebP(header []byte) bool {
+	return len(header) >= 12 &&
+		string(header[0:4]) == "RIFF" &&
+		string(header[8:12]) == "WEBP"
 }
 
 func (api *API) SubscribeTemplates(c *gin.Context) {
