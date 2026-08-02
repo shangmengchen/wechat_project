@@ -27,11 +27,17 @@ const maxImageUploadBytes = 5 << 20
 
 type API struct {
 	service      *service.Service
-	wechatClient *wechatcli.Client
+	wechatClient wechatSessionClient
 	push         *push.Hub
 }
 
-func New(service *service.Service, wechatClient *wechatcli.Client, pushHub *push.Hub) *API {
+type wechatSessionClient interface {
+	Enabled() bool
+	Code2Session(context.Context, string) (wechatcli.Session, error)
+	SendSubscribeMessage(context.Context, wechatcli.SubscribeMessage) error
+}
+
+func New(service *service.Service, wechatClient wechatSessionClient, pushHub *push.Hub) *API {
 	return &API{
 		service:      service,
 		wechatClient: wechatClient,
@@ -56,13 +62,16 @@ func (api *API) Login(c *gin.Context) {
 		req.Nickname = "WeChat User"
 	}
 
-	if strings.TrimSpace(req.OpenID) == "" {
-		session, err := api.exchangeOpenID(c.Request.Context(), req.Code)
-		if err != nil {
-			fail(c, err)
-			return
-		}
-		req.OpenID = session.OpenID
+	session, err := api.exchangeOpenID(c.Request.Context(), req.Code)
+	if err != nil {
+		fail(c, err)
+		return
+	}
+	req.UserID = ""
+	req.OpenID = strings.TrimSpace(session.OpenID)
+	if req.OpenID == "" {
+		fail(c, fmt.Errorf("wechat auth missing openid"))
+		return
 	}
 
 	user, err := api.service.Login(req)
@@ -566,6 +575,9 @@ func (api *API) MarkNoticesRead(c *gin.Context) {
 func (api *API) exchangeOpenID(ctx context.Context, code string) (wechatcli.Session, error) {
 	if api.wechatClient != nil && api.wechatClient.Enabled() {
 		return api.wechatClient.Code2Session(ctx, code)
+	}
+	if strings.EqualFold(strings.TrimSpace(configs.GetGlobalConfig().AppConfig.RunMode), "release") {
+		return wechatcli.Session{}, fmt.Errorf("wechat auth not configured")
 	}
 	code = strings.TrimSpace(code)
 	if code == "" {

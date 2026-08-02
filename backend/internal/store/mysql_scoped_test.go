@@ -56,6 +56,65 @@ func TestUpdateUserProfileForUserRejectsOtherUser(t *testing.T) {
 	}
 }
 
+func TestLoginDoesNotRebindExistingUserByClientUserID(t *testing.T) {
+	db := openScopedTestDB(t)
+	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)
+	seedScopedFixture(t, db, now)
+
+	store := NewMySQLStore(db)
+	user, err := store.Login("u1", "attacker-openid", "Attacker", "X")
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if user.ID == "u1" {
+		t.Fatalf("expected new server-owned user, got existing user: %+v", user)
+	}
+	if user.OpenID != "attacker-openid" {
+		t.Fatalf("expected attacker openid on a new user, got %+v", user)
+	}
+
+	protected, err := store.user("u1")
+	if err != nil {
+		t.Fatalf("fetch protected user: %v", err)
+	}
+	if protected.OpenID != "openid-u1" || protected.Nickname != "User One" {
+		t.Fatalf("existing user was modified: %+v", protected)
+	}
+}
+
+func TestLoginUsesExistingUserOnlyWhenOpenIDMatches(t *testing.T) {
+	db := openScopedTestDB(t)
+	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)
+	seedScopedFixture(t, db, now)
+
+	store := NewMySQLStore(db)
+	user, err := store.Login("u1", "openid-u1", "Renamed", "Z")
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if user.ID != "u1" || user.OpenID != "openid-u1" || user.Nickname != "Renamed" || user.Avatar != "Z" {
+		t.Fatalf("expected matched user to update profile only, got %+v", user)
+	}
+}
+
+func TestLoginGeneratesServerUserIDForNewOpenID(t *testing.T) {
+	db := openScopedTestDB(t)
+	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)
+	seedScopedFixture(t, db, now)
+
+	store := NewMySQLStore(db)
+	user, err := store.Login("client-chosen-id", "new-openid", "New User", "N")
+	if err != nil {
+		t.Fatalf("Login: %v", err)
+	}
+	if user.ID == "client-chosen-id" {
+		t.Fatalf("expected server-generated user ID, got %+v", user)
+	}
+	if user.OpenID != "new-openid" {
+		t.Fatalf("unexpected user: %+v", user)
+	}
+}
+
 func TestUnpairForUserClearsPairForBothUsers(t *testing.T) {
 	db := openScopedTestDB(t)
 	now := time.Date(2026, time.July, 25, 10, 0, 0, 0, time.Local)

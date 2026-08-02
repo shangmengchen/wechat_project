@@ -79,13 +79,14 @@ func (s *MySQLStore) ensureCoupleMigrationCompatibility(ctx context.Context) err
 
 func (s *MySQLStore) Login(userID, openid, nickname, avatar string) (domain.User, error) {
 	var user userModel
+	openid = strings.TrimSpace(openid)
+	if openid == "" {
+		return domain.User{}, ErrUnauthorized
+	}
 	if strings.TrimSpace(userID) != "" {
-		err := s.db.Where("id = ?", userID).Take(&user).Error
+		err := s.db.Where("id = ? AND openid = ?", userID, openid).Take(&user).Error
 		if err == nil {
 			updates := map[string]any{}
-			if strings.TrimSpace(openid) != "" && openid != user.OpenID {
-				updates["openid"] = openid
-			}
 			if strings.TrimSpace(nickname) != "" && nickname != user.Nickname {
 				updates["nickname"] = nickname
 			}
@@ -126,7 +127,7 @@ func (s *MySQLStore) Login(userID, openid, nickname, avatar string) (domain.User
 		return domain.User{}, err
 	}
 	user = userModel{
-		ID:        firstNonEmpty(strings.TrimSpace(userID), newID("u")),
+		ID:        newID("u"),
 		OpenID:    openid,
 		Nickname:  nickname,
 		Avatar:    avatar,
